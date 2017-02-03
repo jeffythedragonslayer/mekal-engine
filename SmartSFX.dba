@@ -1,0 +1,217 @@
+REM *** Include File: SmartSFX.dba ***
+REM Created: 3/25/2008 8:22:17 PM
+REM
+REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\Mekal\Mekal.dbpro
+REM
+
+#constant SMARTSFX_VOLUME = 100
+
+type aSmartSFX
+
+  name as string
+  soundptr as dword
+  cloneme as dword
+  in3d as boolean
+
+endtype
+
+function SmartSFX_init()
+
+  dim SmartSFX() as aSmartSFX
+
+endfunction
+
+function SmartSFX_load(filename as string, in3d as boolean)
+`The second parameter is named such because of the Weird Al
+`album In 3D.  It has an amazing song called Eat It.
+  local id as dword
+  local soundptr as dword
+
+  filename = fast lower$(filename)
+
+  `make sure sound isn't already loaded
+  if array count(SmartSFX()) > -1
+    for id = 0 to array count(SmartSFX())
+      if SmartSFX(id).name = filename
+        exitfunction id
+      endif
+    next id
+  endif
+  
+  add to queue SmartSFX()
+
+  soundptr = make memory(8)
+  SmartSFX().soundptr = soundptr
+
+  SmartSFX().name = fast left$(filename, fast len(filename) - 4)
+  SmartSFX().in3d = in3d
+
+  if file exist(filename)
+    if in3d
+      SmartSFX().cloneme = snd load sound3d(filename)
+    else
+      SmartSFX().cloneme = snd load sound(filename)
+    endif
+  else
+    set dir "..\Common"
+    if in3d
+      SmartSFX().cloneme = snd load sound3d(filename)
+    else
+      SmartSFX().cloneme = snd load sound(filename)
+    endif
+    set dir "..\" + game
+  endif
+
+  *soundptr = snd_clone_sound(SmartSFX().cloneme)
+
+  set sound volume *soundptr, SMARTSFX_VOLUME
+
+  `set next pointer link to null
+  inc soundptr, 4
+  *soundptr = 0
+
+  id = array count(SmartSFX())
+endfunction id
+
+`create a new sound in the linked list
+function SmartSFX_copy(soundid as dword, soundptr as dword)
+
+  local ptr as dword
+
+  `put new sound id in link
+  ptr = make memory(8)
+  *ptr = snd_clone_sound(SmartSFX(soundid).cloneme)
+  
+  `make last link point to this one
+  *soundptr = ptr
+
+  `set next pointer link to null
+  inc ptr, 4
+  *ptr = 0
+  dec ptr, 4
+
+endfunction (*ptr)
+
+function SmartSFX_update()
+
+  position listener x vector3(Camera.position), y vector3(Camera.position), z vector3(Camera.position)
+  rotate listener x vector3(Camera.angle), y vector3(Camera.angle), z vector3(Camera.angle)
+
+endfunction
+
+function SmartSFX_play(name as string, looping as boolean, x as float, y as float, z as float)
+
+  local id
+  local soundptr as dword
+
+  name = fast lower$(name)
+
+  for id = 0 to array count(SmartSFX())
+    if SmartSFX(id).name = name
+      soundptr = SmartSFX(id).soundptr
+      if looping
+
+        `don't loop twice
+        if sound looping(*soundptr) = 0
+        
+          loop sound *soundptr
+
+          `position in 3D
+          if SmartSFX(id).in3d
+            position sound *soundptr, x, y, z
+          endif
+        endif
+        
+        exitfunction id
+
+      else
+        `search for a sound that's done playing
+        do
+          if sound playing(*soundptr) = 0
+            play sound *soundptr
+
+            `position in 3D
+            if SmartSFX(id).in3d
+              position sound *soundptr, x, y, z
+            endif
+            
+            exitfunction id
+            
+          else
+            `make pointer point to the link's pointer
+            `instead of sound id
+            inc soundptr, 4
+
+            `if this is the end of the chain then add a new link
+            if (*soundptr) = 0
+              `clone the sound and edit the value at address soundptr
+              SmartSFX_copy(id, soundptr)
+              soundptr = *soundptr
+              play sound *soundptr
+
+              `position in 3D
+              if SmartSFX(id).in3d
+                position sound *soundptr, x, y, z
+              endif
+              
+              exitfunction id
+              
+            endif
+
+            `step to next link
+            soundptr = *soundptr
+          endif
+
+        loop
+
+      endif
+    endif
+  next id
+
+  `sound not found, so load it
+  id = SmartSFX_load(name + ".wav", x || y || z)
+  SmartSFX_play(name, looping, x, y, z)
+
+endfunction id
+
+function SmartSFX_stop(name as string)
+
+  local id
+  local soundptr as dword
+
+  name = fast lower$(name)
+
+  for id = 0 to array count(SmartSFX())
+    if SmartSFX(id).name = name
+      soundptr = SmartSFX(id).soundptr
+      stop sound *soundptr
+      exitfunction id
+    endif
+  next id
+
+endfunction -1
+
+`update 7:54 PM 10/11/2008: fix memory leak
+function SmartSFX_reset()
+
+  local id
+  local struct as dword
+  local ptr as dword
+  
+  if array count(SmartSFX()) > -1
+    for id = 0 to array count(SmartSFX())
+
+      ptr = SmartSFX().soundptr
+      while ptr
+        struct = ptr
+        `delete sound *struct
+        inc ptr, 4
+        ptr = *ptr
+        `delete memory struct
+      endwhile
+      
+
+    next id
+  endif
+  
+endfunction

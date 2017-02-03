@@ -1,0 +1,231 @@
+REM *** Include File: Water.dba ***
+REM Created: 7/15/2007 7:21:12 AM
+REM
+REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\Mekal\Mekal.dbpro
+REM
+
+global Water as Water
+
+type Water
+
+  shader as dword
+
+endtype
+
+type aWater
+
+  object as dword
+
+  `vectors
+  position as dword
+  size as dword
+
+  amplitude as float
+  period as float
+
+  fogcolor as dword
+
+endtype
+
+function Water_init()
+
+  set dir "..\Common"
+  Water.shader = e3d load effect("pocean.fx", 1)
+  set dir "..\" + game
+  
+  set effect constant float Water.shader, "waveAmp", 0.0
+  
+  dim Water() as aWater
+
+endfunction
+
+function Water_new(x as float, y as float, z as float, width as float, length as float, depth as float, uspeed as float, vspeed as float, amplitude as float, period as dword, fogcolor as dword, transparency as boolean)
+
+  local id as dword
+
+  add to queue Water()
+  id = array count(Water())
+
+  Water().position = make_vector3(x, y, z)
+  Water().size = make_vector3(width, depth, length)
+  Water().amplitude = amplitude
+  Water().period = period
+  Water().fogcolor = fogcolor
+
+  set dir "..\Common"
+  Water().object = b3d load object("slab.x")
+  set dir "..\" + game
+  
+  scale object Water().object, width*100.0, 100.0, length*100.0
+
+  position object Water().object, x, y, z
+
+  set object effect Water().object, Water.shader
+  set object cull Water().object, 0
+  if uspeed or vspeed
+    Scroll_new(Water().object, uspeed, vspeed)
+  endif
+
+  if transparency
+    ghost object on Water().object
+  endif
+
+  `add to world system
+  World_addobj(Water().object, 0)
+
+endfunction id
+
+function Water_update()
+
+  local id
+  local realtime as dword
+  
+  realtime = timer()
+
+  for id = 0 to array count(Water())
+    if Water(id).amplitude
+      position object Water(id).object, x vector3(Water(id).position), y vector3(Water(id).position) + (sin(realtime*360.0/Water(id).period) * Water(id).amplitude), z vector3(Water(id).position)
+    endif
+  next id
+  
+endfunction
+
+function Water_reset()
+
+  local id
+  
+  for id = 0 to array count(Water())
+    null = delete vector3(Water(id).position)
+    null = delete vector3(Water(id).size)
+  next id
+
+  empty array Water()
+
+endfunction
+
+`returns the id of the water plane if a point is in the water or -1 if not in the water
+function Water_pointin(x as float, y as float, z as float, checktop as boolean)
+
+  local id
+
+  for id = 0 to array count(Water())
+    if x => x vector3(Water(id).position) - x vector3(Water(id).size)/2.0
+      if x <= x vector3(Water(id).position) + x vector3(Water(id).size)/2.0
+        if z => z vector3(Water(id).position) - z vector3(Water(id).size)/2.0
+          if z <= z vector3(Water(id).position) + z vector3(Water(id).size)/2.0
+            if (y <= object position y(Water(id).object)) || (checktop = 0)
+              if y => y vector3(Water(id).position) - y vector3(Water(id).size)
+                exitfunction id
+              endif
+            endif
+          endif
+        endif
+      endif
+    endif
+  next id
+  
+endfunction -1
+
+function Virtualizer_Water()
+
+  local watername as string
+
+  do
+
+    Virtualizer_getvar(0)
+
+    if Virtualizer.type = VIRTUALIZER_VARIABLE
+      `set water variables
+      select Virtualizer.var
+        case "x"
+          x = val(Virtualizer.value) * MEKAL_SCALAR
+        endcase
+        case "y"
+          y = val(Virtualizer.value) * MEKAL_SCALAR
+        endcase
+        case "z"
+          z = val(Virtualizer.value) * MEKAL_SCALAR
+        endcase
+        case "width"
+          width = val(Virtualizer.value) * MEKAL_SCALAR
+        endcase
+        case "length"
+          length = val(Virtualizer.value) * MEKAL_SCALAR
+        endcase
+        case "depth"
+          depth = val(Virtualizer.value) * MEKAL_SCALAR
+        endcase
+        case "uspeed"
+          uspeed = val(Virtualizer.value)
+        endcase
+        case "vspeed"
+          vspeed = val(Virtualizer.value)
+        endcase
+        case "amplitude"
+          amplitude = val(Virtualizer.value) * MEKAL_SCALAR
+        endcase
+        case "period"
+          period = val(Virtualizer.value)
+        endcase
+        case "red"
+          red = val(Virtualizer.value)
+        endcase
+        case "green"
+          green = val(Virtualizer.value)
+        endcase
+        case "blue"
+          blue = val(Virtualizer.value)
+        endcase
+        case "transparency"
+          select Virtualizer.value
+            case "true"
+              transparency = 1
+            endcase
+            case "false"
+              transparency = 0
+            endcase
+          endselect
+        endcase
+      endselect
+    else
+
+      `time to create the water before the data gets deleted
+
+      if watername
+
+        `make uv scroll speeds size independent
+        uspeed = uspeed / (width / MEKAL_SCALAR)
+        vspeed = vspeed / (length / MEKAL_SCALAR)
+
+        Water_new(x, y, z, width, length, depth, uspeed, vspeed, amplitude, period, rgb(red, green, blue), transparency)
+
+      endif
+
+      if Virtualizer.type = VIRTUALIZER_EXIT
+        exitfunction
+      endif
+
+      `new water, reset variables
+      local x as float
+      local y as float
+      local z as float
+      local width as float = MEKAL_SCALAR
+      local length as float = MEKAL_SCALAR
+      local depth as float
+      depth = 10.0 * MEKAL_SCALAR
+      local uspeed as float = 0.005
+      local vspeed as float = 0.005
+      local amplitude as float
+      local period as dword
+      local red as byte
+      local green as byte = 128
+      local blue as byte = 128
+      local transparency as boolean = 1
+
+      watername = Virtualizer.name
+
+    endif
+
+  loop
+
+endfunction

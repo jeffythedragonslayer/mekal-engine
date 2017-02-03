@@ -1,0 +1,192 @@
+REM *** Include File: Camera.dba ***
+REM Created: 6/9/2007 8:49:59 AM
+REM
+REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\Mekal\Mekal.dbpro
+REM
+
+#constant CAMERA_FLEXIBILITY = 60
+#constant CAMERA_TWIST_SPEED = 1.5
+
+#constant CAMERA_LOOK_SPEED = 1.5
+#constant CAMERA_TOO_SLOW = 0.75
+#constant CAMERA_SWING_SPEED = 0.8
+#constant CAMERA_DISTANCE = 7
+#constant CAMERA_HEIGHT = 1.75
+#constant CAMERA_SWING_THRESHOLD = 85
+#constant CAMERA_SMOOTH_FACTOR = 15
+
+#constant CAMERA_FOV_DEFAULT = 61.962
+#constant CAMERA_FOV_ZOOM = 10.0
+
+global Camera as Camera
+
+type Camera
+
+  mode as boolean
+  #constant CAMERA_THIRD = 0
+  #constant CAMERA_FIRST = 1
+  
+  position as dword
+  
+  angle as dword
+  oldangle as dword
+  
+  tpangle as float
+
+  inwater as boolean
+
+endtype
+
+function Camera_init()
+
+  global CAMERA_FOG_CLOSE as float = MEKAL_SCALAR
+  global CAMERA_FOG_FAR as float
+  CAMERA_FOG_FAR = 7 * MEKAL_SCALAR
+
+  global CAMERA_COLLISION_RADIUS as float
+  CAMERA_COLLISION_RADIUS = 0.2 * MEKAL_SCALAR
+
+  global CAMERA_PULL_DISTANCE as float
+  CAMERA_PULL_DISTANCE = 5 * MEKAL_SCALAR
+  
+  Camera.position = make_vector3(0, 0, 0)
+  Camera.angle = make_vector3(0, 0, 0)
+  Camera.oldangle = make_vector3(0, 0, 0)
+
+  Intellizone_init()
+
+endfunction
+
+function Camera_update(smooth as boolean)
+
+  local camswing
+  local pointin
+  local intellizone
+  
+  if Entity.player = -1
+    exitfunction
+  endif
+
+  if Inp.push3 && Entity.playermoving = 0 && (Entity(Entity.player).airborn = 0 || Entity(Entity.player).surfacelock)
+    `first person view
+
+    `set camera 4 angle to default and hide player
+    if Camera.mode = CAMERA_THIRD
+      Camera.mode = CAMERA_FIRST
+      set_vector3_x(Camera.angle, 0, 0)
+      xrotate camera 0
+      exclude object on Entity(Entity.player).object
+    endif
+    
+    `save old angle
+    copy vector3 Camera.oldangle, Camera.angle
+
+    `position camera at object
+    set_vector3_to_object_position(Camera.position, Entity(Entity.player).object)
+    set_vector3_y(Camera.position, EntityTemplate(Entity(Entity.player).template).yoffset, 1)
+    position_camera_to_vector3(Camera.position)
+
+    `use input device to look, undo if too slow
+    set_vector3_x(Camera.angle, -Inp.y * CAMERA_LOOK_SPEED * Tbm.factor, 1)
+    if anglediff(0, x vector3(Camera.angle)) > CAMERA_FLEXIBILITY or abs(Inp.y * CAMERA_LOOK_SPEED * Tbm.factor) < CAMERA_TOO_SLOW
+      set_vector3_x(Camera.angle, x vector3(Camera.oldangle), 0)
+    endif
+
+    set_vector3_y(Camera.angle, Inp.x * CAMERA_LOOK_SPEED * Tbm.factor, 1)
+
+    if abs(Inp.x * CAMERA_LOOK_SPEED * Tbm.factor) < CAMERA_TOO_SLOW
+      set_vector3_y(Camera.angle, y vector3(Camera.oldangle), 0)
+    endif
+
+    `rotate camera to desired angle
+    rotate_camera_to_vector3(Camera.angle)
+
+    `set fov
+    set camera fov (CAMERA_FOV_ZOOM - CAMERA_FOV_DEFAULT) * Inp.slide + CAMERA_FOV_DEFAULT
+
+    `make player rotate with camera
+    yrotate object Entity(Entity.player).object, y vector3(Camera.angle)
+
+  else
+    `third person view
+    
+    if Camera.mode = CAMERA_FIRST
+      Camera.mode = CAMERA_THIRD
+      Camera.tpangle = y vector3(Camera.angle)
+    endif
+
+    exclude object off Entity(Entity.player).object
+
+    intellizone = Intellizone_inintellizone()
+    if intellizone > -1
+      `use intellizone system to extrapolate camera position
+      Intellizone_extrapolate(id, smooth)
+
+    else
+      `use standard aesthenics control
+
+      if Entity.playermoving
+        `make camera swing around player when not in back of him
+        if anglediff(Entity.playerangle+90, Camera.tpangle+180) < CAMERA_SWING_THRESHOLD
+          camswing = 1
+        else
+          if anglediff(Entity.playerangle-90, Camera.tpangle+180) < CAMERA_SWING_THRESHOLD
+            camswing = -1
+          endif
+        endif
+
+        `swing camera around for best angle
+        inc Camera.tpangle, camswing * CAMERA_SWING_SPEED * Tbm.factor
+
+      endif
+
+      `manual camera control
+      inc Camera.tpangle, Inp.twistz * CAMERA_TWIST_SPEED * Tbm.factor
+
+      `posiition camera
+      set camera to follow object position x(Entity(Entity.player).object), object position y(Entity(Entity.player).object), object position z(Entity(Entity.player).object), Camera.tpangle, EntityTemplate(Entity(Entity.player).template).radius * CAMERA_DISTANCE, EntityTemplate(Entity(Entity.player).template).size * CAMERA_HEIGHT + EntityTemplate(Entity(Entity.player).template).yoffset, 1 + smooth * CAMERA_SMOOTH_FACTOR, 0
+
+    endif
+
+    `camera collision if camera isn't far away from entity
+    if b3d get distance from camera(Entity(Entity.player).object) < CAMERA_PULL_DISTANCE && (sc_spherecastgroup(SC_WORLD, x vector3(Camera.position), y vector3(Camera.position), z vector3(Camera.position), camera position x(), camera position y(), camera position z(), CAMERA_COLLISION_RADIUS, 0) <> 0)
+      set vector3 Camera.position, sc_getcollisionslidex(), sc_getcollisionslidey(), sc_getcollisionslidez()
+      position_camera_to_vector3(Camera.position)
+    else
+      set vector3 to camera position Camera.position, 0
+    endif
+
+    `look at player
+    point camera object position x(Entity(Entity.player).object), object position y(Entity(Entity.player).object), object position z(Entity(Entity.player).object)
+    set vector3 to camera rotation Camera.angle, 0
+
+    `set fov
+    set camera fov CAMERA_FOV_DEFAULT
+
+  endif
+
+  `water fog
+  pointin = Water_pointin(x vector3(Camera.position), y vector3(Camera.position), z vector3(Camera.position), 1)
+  if pointin > -1
+    `camera is in water
+    if Camera.inwater = 0
+      Camera.inwater = 1
+      fog on
+      fog color Water(pointin).fogcolor
+      fog distance CAMERA_FOG_CLOSE, CAMERA_FOG_FAR
+    endif
+  else
+    `camera is not in water
+    if Camera.inwater
+      fog off
+      Camera.inwater = 0
+    endif
+  endif
+
+endfunction
+
+function Camera_reset()
+
+  Intellizone_reset()
+
+endfunction

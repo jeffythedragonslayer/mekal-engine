@@ -1,0 +1,60 @@
+REM *** Include File: LinkObj.dba ***
+REM Created: 4/6/2008 3:17:20 PM
+REM
+REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\Mekal\Mekal.dbpro
+REM 
+
+`LinkObj allows regular World objects to become Links
+
+type aLinkObj
+
+  object as dword
+  linkname as string
+  
+endtype
+
+function LinkObj_init()
+
+  dim LinkObj() as aLinkObj
+  
+endfunction
+
+function LinkObj_new(object as dword, linkname as string)
+
+  local id as dword
+
+  add to queue LinkObj()
+  id = array count(LinkObj())
+  
+  LinkObj().object = object
+  LinkObj().linkname = linkname
+  
+endfunction id
+
+function LinkObj_find(linkname as string)
+
+  local id
+  
+  if array count(LinkObj()) = -1
+    exitfunction -1
+  endif
+  
+  for id = 0 to array count(LinkObj())
+    if LinkObj(id).linkname = linkname
+      exitfunction id
+    endif
+  next id
+  
+endfunction -1
+
+function LinkObj_delete(id as dword)
+
+  array delete element LinkObj(), id
+  
+endfunction
+
+function LinkObj_reset()
+
+  empty array LinkObj()
+  
+endfunction

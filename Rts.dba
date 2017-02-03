@@ -1,0 +1,159 @@
+REM *** Include File: Rts.dba ***
+REM Created: 7/17/2007 7:55:39 AM
+REM 
+REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\Mekal\Mekal.dbpro
+REM
+
+#constant RTS_SCALAR = 1.0
+
+global Rts as Rts
+
+type Rts
+
+  active as boolean
+  name as string
+  
+  `vector
+  wind as dword
+  
+  day as dword
+  hour as dword
+  minute as dword
+  second as dword
+  
+endtype
+
+function Rts_load(name as string)
+
+  local object as byte
+
+  `if skybox is already loaded don't bother
+  if Rts.name = name
+    exitfunction
+  endif
+
+  Rts_reset()
+  set dir "..\Common"
+  rts setup skybox name, 0
+  set dir "..\" + game
+  set object transparency rts get loaded object(0), 1
+  set object transparency rts get loaded object(1), 1
+  set object transparency rts get loaded object(9), 1
+
+  Rts.name = name
+  Rts.active = 1
+  rts update skybox
+
+endfunction
+
+`1 is pause
+`0 is unpause
+function Rts_pause(pause as boolean)
+
+  if pause
+    Rts.day = rts get day()
+    Rts.hour = rts get hour()
+    Rts.minute = rts get minutes()
+    Rts.second = rts get seconds()
+    rts set wind speed 0, 0
+  else
+    rts update skybox
+    rts set day Rts.day
+    rts set hour Rts.hour
+    rts set minutes Rts.minute
+    rts set seconds Rts.second
+    rts set wind speed x vector2(Rts.wind), y vector2(Rts.wind)
+  endif
+
+endfunction
+
+function Rts_update()
+
+  if Rts.active = 0
+    exitfunction
+  endif
+  rts update skybox
+  
+endfunction
+
+function Rts_reset()
+
+  rts clear skybox
+  null = delete vector2(Rts.wind)
+  
+  Rts.active = 0
+
+endfunction
+
+function Virtualizer_Sky()
+
+  local skyname as string
+  local firstsky as boolean
+
+  do
+
+    Virtualizer_getvar(0)
+
+      if Virtualizer.type = VIRTUALIZER_VARIABLE
+        `set sky variables
+        select Virtualizer.var
+          case "hour"
+            hour = val(Virtualizer.value)
+          endcase
+          case "minutes"
+            minutes = val(Virtualizer.value)
+          endcase
+          case "timeexpansion"
+            rimeexpansion = val(Virtualizer.value)
+          endcase
+          case "windx"
+            windx = val(Virtualizer.value)
+          endcase
+          case "windy"
+            windy = val(Virtualizer.value)
+          endcase
+          case "clouddensity"
+            clouddensity = val(Virtualizer.value)
+          endcase
+          case "mistdensity"
+            mistdensity = val(Virtualizer.value)
+          endcase
+        endselect
+      else
+        `either this is the start of a new sky, or the end of the entire tag
+        `either way, if there's an sky in memory we want to create it
+
+        if skyname
+          `time to create the sky before the data gets deleted
+          firstsky = 1 - Rts.active
+          Rts_load(skyname)
+          if firstsky
+            rts set clock hour, minutes, timeexpansion
+          endif
+          rts set wind speed windx, windy
+          Rts.wind = make_vector2(windx, windy)
+          rts set cloud density clouddensity
+          rts set mist density mistdensity
+
+        endif
+
+        if Virtualizer.type = VIRTUALIZER_EXIT
+          exitfunction
+        endif
+
+        `new sky, reset variables
+        local hour as dword = 12
+        local minutes as dword
+        local timeexpansion as float = 0.25
+        local windx as float = 0.0000125
+        local windy as float = 0.0000025
+        local clouddensity as float = 30.0
+        local mistdensity as float = 0.0
+
+        skyname = Virtualizer.name
+
+      endif
+
+  loop
+
+endfunction

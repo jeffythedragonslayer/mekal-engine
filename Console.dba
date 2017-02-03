@@ -1,0 +1,103 @@
+REM *** Include File: Console.dba ***
+REM Created: 8/11/2007 8:51:24 AM
+REM
+REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\Mekal\Mekal.dbpro
+REM
+
+#constant CONSOLE_MAX_SIZE = 32
+#constant CONSOLE_DELETE_DELAY = 2250
+#constant CONSOLE_FADE_TIME = 750.0
+#constant CONSOLE_SPACE = 20
+#constant CONSOLE_SHIFT_TIME = 500.0
+
+global Console as Console
+
+type Console
+
+  nextdelete as dword
+  stabilize as dword
+
+endtype
+
+type aConsole
+
+  message as string
+  color as dword
+  posttime as float
+
+endtype
+
+function Console_init()
+
+  dim Console() as aConsole
+
+endfunction
+
+function Console_send(message as string, color as dword)
+
+  `delete old message
+  if array count(Console())+1 > CONSOLE_MAX_SIZE || (array count(Console())=-1)
+    Console_delete()
+  endif
+
+  `send message
+  add to queue Console()
+  Console().message = message
+  Console().color = color
+  Console().posttime = Tbm.now
+
+endfunction
+
+function Console_update()
+
+  local messages as dword
+  local offset as float
+  local alpha as byte
+
+  `delete a message if enough time has gone by
+  if Tbm.now => Console.nextdelete
+    Console_delete()
+    Console.stabilize = Tbm.now + CONSOLE_SHIFT_TIME
+  endif
+
+  `offset the text
+  if Console.stabilize > Tbm.now
+    offset = (Console.stabilize - Tbm.now) / CONSOLE_SHIFT_TIME
+  endif
+
+  d3d_starttext
+    for message = 0 to array count(Console())
+
+      if Tbm.now < (Console(message).posttime + CONSOLE_FADE_TIME)
+        `fade in
+        alpha = ((Tbm.now - Console(message).posttime)*255) / CONSOLE_FADE_TIME
+      else
+        `fadeout
+        if message = 0 && Tbm.now > Console.nextdelete - CONSOLE_FADE_TIME
+          alpha = ((Console.nextdelete - Tbm.now)*255) / CONSOLE_FADE_TIME
+        else
+          alpha = 255
+        endif
+      endif
+      Console(message).color = (alpha << 24) || ((Console(message).color << 8) >> 8)
+
+      d3d_text D3D_CONSOLE, 5, CONSOLE_SPACE * (message + offset), 0, Console(message).message, Console(message).color
+    next message
+  d3d_endtext
+
+endfunction
+
+function Console_delete()
+
+  if array count(Console()) > -1
+    array delete element Console(), 0
+  endif
+  Console.nextdelete = Tbm.now + CONSOLE_DELETE_DELAY
+
+endfunction
+
+function Console_reset()
+
+  empty array Console()
+
+endfunction

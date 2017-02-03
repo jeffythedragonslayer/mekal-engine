@@ -1,0 +1,58 @@
+[titles]
+:  title=Planet Kipe
+:  subtitle=(Big City)
+[/titles]
+[objects]
+testlevel.x
+[/objects]
+[lights]
+Hi
+:  x=2
+:  y=5
+:  z=2
+:  halo=halo02.jpg
+:  red=64
+:  green=255
+:  blue=0
+[/lights]
+[water]
+Lake Mekal
+:  x=0
+:  y=0.5
+:  z=0
+:  width=20
+:  length=20
+:  depth=5
+:  amplitude=0.5
+:  period=4000
+:  transparency=false
+[/water]
+[entities]
+Player
+:  y=2
+[/entities]
+[links]
+toOutsideMekalTemple
+:  world=OutsideMekalTemple
+:  linkto=toTestLevel
+:  x=9
+:  y=2
+:  z=9
+:  width=2
+:  length=2
+:  ry=225
+[/links]
+[sky]
+BigCity
+[/sky]
+[intellizones]
+main
+:  x=2
+:  y=7
+:  z=3
+:  extrapolation=0.2
+[/intellizones]
+[music]
+File Load.mp3
+:  radius=0
+[/music]

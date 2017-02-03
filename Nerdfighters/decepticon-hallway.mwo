@@ -1,0 +1,125 @@
+[general]
+:  diey = -50
+:  ambientlight = 15
+[/general]
+
+[entities]
+Player
+:  y = 2
+:  z = -15
+
+// spinkle decepticons throughout the hallway
+
+Decepticon
+:  y = 1
+:  z = 55
+Decepticon
+:  x = -1
+:  y = 1
+:  z = 42
+Decepticon
+:  x = -0.25
+:  y = 1
+:  z = 30
+Decepticon
+:  x = 1.5
+:  y = 1
+:  z = 20
+Decepticon
+:  x = -1
+:  y = 1
+Decepticon
+:  x = 1
+:  y = 1
+:  z = -25
+Decepticon
+:  x = -1.5
+:  y = 1
+:  z = -30
+Decepticon
+:  x = 1
+:  y = 1
+:  z = -40
+[/entities]
+
+[objects]
+
+decepticon-hallway.dbo
+:  texturev = 30
+
+*
+:  sy = 1.5
+:  x = 1.5
+:  sx = 0.666
+
+:  y = 1
+:  rz = 90
+
+decepticon-door.dbo
+:  x = 1.49
+:  z = 30
+:  ry = -90
+
+// the new decepticon-hallway.dbo will
+// have a cutout hole for the
+// decepticon-door.dbo
+
+:  uspeed = -0.0025
+:  vspeed = 0.0025
+:  solid = false
+:  diffusered = 0
+:  diffusegreen = 0
+
+:  link = tocell
+
+*
+:  z = -60
+
+// the new decepticon-hallway.dbo will
+// have a cutout hole for the
+// decepticon-door.dbo
+
+:  uspeed = -0.0025
+:  vspeed = 0.0025
+:  solid = false
+:  diffusered = 0
+:  diffusegreen = 0
+
+:  link = todecepticon-stairwell
+
+// All your puppy size elephant
+// are belong to us
+
+all-your-puppy.dbo
+:  x = -1.49
+:  y = 1
+:  z = 20
+*
+:  x = 1.49
+:  y = 1
+:  z = -10
+:  ry = 180
+*
+:  x = -1.49
+:  y = 1
+:  z = -40
+
+:  solid = false
+
+[/objects]
+
+[links]
+
+tocell
+:  world = cell
+:  linkto = todecepticon-hallway
+
+todecepticon-stairwell
+:  world = decepticon-stairwell
+:  linkto = todecepticon-hallway
+
+[/links]
+
+[music]
+tetris.mp3
+[/music]

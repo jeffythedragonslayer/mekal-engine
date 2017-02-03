@@ -1,0 +1,22 @@
+X4 RealTime-SkyBox Definition
+CIEL:
+BleuCiel.bmp
+NUAGES:
+Ciel1.bmp
+ETOILES:
+cieletoile.bmp
+SOLEIL:
+soleil.bmp
+LUNE:
+lune.bmp
+HALOLEVER:
+lever.bmp
+HALOCOUCHER:
+coucher.bmp
+AURORE:
+crepuscule.bmp
+BACKGROUND:
+villeriche.bmp
+GROUND:
+ground.bmp
+ENDOFRSD

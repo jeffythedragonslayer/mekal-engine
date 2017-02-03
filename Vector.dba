@@ -1,0 +1,151 @@
+REM *** Include File: Vector.dba ***
+REM Created: 3/13/2008 5:57:53 PM
+REM
+REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\Mekal\Mekal.dbpro
+REM 
+
+global vectorid as dword
+
+function free_vector()
+
+  inc vectorid
+
+endfunction vectorid
+
+function make_vector2(x as float, y as float)
+
+  local id as dword
+
+  id = free_vector()
+  null = make vector2(id)
+  set vector2 id, x, y
+
+endfunction id
+
+function make_vector3(x as float, y as float, z as float)
+
+  local id as dword
+
+  id = free_vector()
+  null = make vector3(id)
+  set vector3 id, x, y, z
+
+endfunction id
+
+function invert_vector3(vector as dword)
+
+  set vector3 vector, -x vector3(vector), -y vector3(vector), -z vector3(vector)
+  
+endfunction vector
+
+function set_vector3_x(vector as dword, x as float, relative as boolean)
+
+  if relative
+    inc x, x vector3(vector)
+  endif
+  set vector3 vector, x, y vector3(vector), z vector3(vector)
+
+endfunction
+
+function set_vector3_y(vector as dword, y as float, relative as boolean)
+
+  if relative
+    inc y, y vector3(vector)
+  endif
+  set vector3 vector, x vector3(vector), y, z vector3(vector)
+
+endfunction
+
+function set_vector3_z(vector as dword, z as float, relative as boolean)
+
+  if relative
+    inc z, z vector3(vector)
+  endif
+  set vector3 vector, x vector3(vector), y vector3(vector), z
+
+endfunction
+
+function set_vector3_xy(vector as dword, x as float, y as float, relative as boolean)
+
+  if relative
+    inc x, x vector3(vector)
+    inc y, y vector3(vector)
+  endif
+
+  set vector3 vector, x, y, z vector3(vector)
+
+endfunction
+
+function set_vector3_yz(vector as dword, y as float, z as float, relative as boolean)
+
+  if relative
+    inc y, y vector3(vector)
+    inc z, z vector3(vector)
+  endif
+
+  set vector3 vector, x vector3(vector), y, z
+
+endfunction
+
+function set_vector3_xz(vector as dword, x as float, z as float, relative as boolean)
+
+  if relative
+    inc x, x vector3(vector)
+    inc z, z vector3(vector)
+  endif
+
+  set vector3 vector, x, y vector3(vector), z
+
+endfunction
+
+function set_vector3_to_object_position(vector as dword, object as dword)
+
+  set vector3 vector, object position x(object), object position y(object), object position z(object)
+
+endfunction
+
+function position_camera_to_vector3(vector as dword)
+
+  position camera x vector3(vector), y vector3(vector), z vector3(vector)
+
+endfunction
+
+function rotate_camera_to_vector3(vector as dword)
+
+  rotate camera x vector3(vector), y vector3(vector), z vector3(vector)
+
+endfunction
+
+function position_object_to_vector3(object as dword, vector as dword, relative as boolean)
+
+  local x as float
+  local y as float
+  local z as float
+  
+  if relative
+   x = object position x(object)
+   y = object position y(object)
+   z = object position z(object)
+  endif
+  
+  position object object, x vector3(vector) + x, y vector3(vector) + y, z vector3(vector) + z
+
+endfunction
+
+function rotate_object_to_vector3(object as dword, vector as dword)
+
+  rotate object object, x vector3(vector), y vector3(vector), z vector3(vector)
+
+endfunction
+
+function point_object_to_vector3(object as dword, vector as dword)
+
+  point object object, x vector3(vector), y vector3(vector), z vector3(vector)
+
+endfunction
+
+function wrapvalue_vector3(vector as dword)
+
+  set vector3 vector, wrap(x vector3(vector), 0, 360), wrap(y vector3(vector), 0, 360), wrap(z vector3(vector), 0, 360)
+  
+endfunction

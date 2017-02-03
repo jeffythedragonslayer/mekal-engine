@@ -1,0 +1,186 @@
+REM *** Include File: Link.dba ***
+REM Created: 6/23/2007 10:53:36 AM
+REM
+REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\Mekal\Mekal.dbpro
+REM
+
+`Link removes the currently loaded area from memory
+`and virtualizes a new world when a player exits the area
+
+type Link
+
+  object as dword
+
+  name as string
+  worldto as string
+  linkto as string
+  titles as boolean
+  
+endtype
+
+function Link_init()
+
+  dim Link() as Link
+  LinkObj_init()
+
+endfunction
+
+function Link_new(name as string, worldto as string, linkto as string, titles as boolean, x as float, y as float, z as float, rx as float, ry as float, rz as float, width as float, height as float)
+
+  local id as dword
+  local linkobjid = -1
+
+  add to queue Link()
+  id = array count(Link())
+  
+  Link().name = name
+  Link().worldto = worldto
+  Link().linkto = linkto
+  Link().titles = titles
+  
+  `maybe the height and width are 0 because
+  `the link is actually a World object
+  linkobjid = LinkObj_find(name)
+  if linkobjid > -1
+  
+    Link().object = LinkObj(linkobjid).object
+    LinkObj_delete(linkobjid)
+    
+    `remember, linkobjects are not allowed to
+    `already have collision
+    sc_setupobject Link().object, 0, 0
+
+    `param data for positioning, rotating, width and height are ignored
+
+  else
+  
+    `or maybe it's not
+    Link().object = b3d make object plain(width, height)
+    if MEKAL_LINKS_VISIBLE = 0
+      exclude object on Link().object
+    endif
+    
+    `standard link making procedure
+    position object Link().object, x, y, z
+    rotate object Link().object, rx, ry, rz
+    sc_setupobject Link().object, 0, 2
+    
+    `make sure object gets deleted when loading a new World
+    World_addobj(Link().object, 0)
+    
+  endif
+
+endfunction id
+
+`if the player hits a link, load a new World
+function Link_update()
+
+  local id
+  
+  if Entity.player > -1
+    for id = 0 to array count(Link())
+      if sc_objectcollision(Entity(Entity.player).object, Link(id).object)
+        Virtualizer_load(Link(id).worldto, Link(id).linkto, Link(id).titles, 0)
+        exitfunction 1
+      endif
+    next id
+  endif
+
+endfunction 0
+
+`returns the id number of the link which given name
+function Link_find(name as string)
+
+  local id
+  
+  for id = 0 to array count(Link())
+    if Link(id).name = name
+      exitfunction id
+    endif
+  next id
+
+endfunction -1
+
+function Link_reset()
+
+  LinkObj_reset()
+  empty array Link()
+
+endfunction
+
+function Virtualizer_Links()
+
+  local linkname as string
+
+  do
+
+      Virtualizer_getvar(0)
+
+      if Virtualizer.type = VIRTUALIZER_VARIABLE
+        `set link variables
+        select Virtualizer.var
+          case "world"
+            worldto = Virtualizer.value
+          endcase
+          case "linkto"
+            linkto = Virtualizer.value
+          endcase
+          case "titles"
+            titles = (Virtualizer.value = "true")
+          endcase
+          case "x"
+            x = val(Virtualizer.value) * MEKAL_SCALAR
+          endcase
+          case "y"
+            y = val(Virtualizer.value) * MEKAL_SCALAR
+          endcase
+          case "z"
+            z = val(Virtualizer.value) * MEKAL_SCALAR
+          endcase
+          case "rx"
+            rx = val(Virtualizer.value)
+          endcase
+          case "ry"
+            ry = val(Virtualizer.value)
+          endcase
+          case "rz"
+            rz = val(Virtualizer.value)
+          endcase
+          case "width"
+            width = val(Virtualizer.value) * MEKAL_SCALAR
+          endcase
+          case "height"
+            height = val(Virtualizer.value) * MEKAL_SCALAR
+          endcase
+        endselect
+      else
+
+        `time to create the link before the data gets deleted
+        if linkname
+          Link_new(linkname, worldto, linkto, titles, x, y, z, rx, ry, rz, width, height)
+        endif
+
+        if Virtualizer.type = VIRTUALIZER_EXIT
+          exitfunction
+        endif
+
+        `new link, reset variables
+        local worldto as string
+        local linkto as string
+        local titles as boolean = 1
+        local x as float
+        local y as float
+        local z as float
+        local rx as float
+        local ry as float
+        local rz as float
+        local width as float = MEKAL_SCALAR
+        local height as float = MEKAL_SCALAR
+
+        linkname = Virtualizer.name
+
+      endif
+
+  loop
+
+endfunction

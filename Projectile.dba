@@ -1,0 +1,183 @@
+REM *** Include File: Projectile.dba ***
+REM Created: 8/28/2007 3:49:50 PM
+REM
+REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\Mekal\Mekal.dbpro
+REM
+
+global Projectile as Projectile
+
+type Projectile
+
+  texture as dword
+  sourceobject as dword
+
+endtype
+
+type aProjectile
+
+  object as dword
+  thrower
+  attack as dword
+  time
+  
+  `vectors
+  velocity as dword
+  position as dword
+  oldposition as dword
+
+endtype
+
+function Projectile_init()
+
+  dim Projectile() as aProjectile
+  
+  set dir "..\Common"
+  Projectile.texture = img load image("energy.bmp")
+  set dir "..\" + game
+  
+  Projectile.sourceobject = b3d make object plain(0.1 * MEKAL_SCALAR, 0.1 * MEKAL_SCALAR)
+  texture object Projectile.sourceobject, Projectile.texture
+  set object light Projectile.sourceobject, 0
+  exclude object on Projectile.sourceobject
+
+endfunction
+
+function Projectile_new(x as float, y as float, z as float, dx as float, dy as float, dz as float, speed as float, time as dword, thrower, attack as dword)
+
+  local id as dword
+  
+  add to queue Projectile()
+  id = array count(Projectile())
+  
+  Projectile().time = Tbm.now + time
+  Projectile().thrower = thrower
+  Projectile().attack = attack
+  
+  Projectile().velocity = make_vector3(dx, dy, dz)
+  normalize vector3 Projectile().velocity, Projectile().velocity
+  multiply vector3 Projectile().velocity, speed
+  Projectile().position = make_vector3(x, y, z)
+  Projectile().oldposition = make_vector3(x, y, z)
+
+  `make object
+  Projectile().object = b3d clone object(Projectile.sourceobject)
+  ghost object on Projectile().object
+  b3d object to billboard Projectile().object
+  position_object_to_vector3(Projectile().object, Projectile().oldposition, 0)
+  
+endfunction id
+
+function Projectile_update(harmless as boolean)
+
+  local id
+  local object as dword
+  local entity
+  local exist as boolean
+  
+  local oldx as float
+  local oldy as float
+  local oldz as float
+  
+  local x as float
+  local y as float
+  local z as float
+  
+  local speed as float
+  
+  for id = 0 to array count(Projectile())
+
+    if Projectile(id).time => Tbm.now
+
+      `reset variables
+      local collision as dword
+      local thrower as dword
+      object = Projectile(id).object
+      
+      `move projectile
+      copy vector3 Projectile(id).position, Projectile(id).velocity
+      multiply vector3 Projectile(id).position, Tbm.factor
+      add vector3 Projectile(id).position, Projectile(id).position, Projectile(id).oldposition
+
+      `check for collision
+      if (harmless = 0) && (Projectile(id).thrower > -1)
+        thrower = Entity(Projectile(id).thrower).object
+      endif
+      collision = sc_raycastgroup(SC_WORLD, x vector3(Projectile(id).oldposition), y vector3(Projectile(id).oldposition), z vector3(Projectile(id).oldposition), x vector3(Projectile(id).position), y vector3(Projectile(id).position), z vector3(Projectile(id).position), thrower)
+
+      exist = 1
+      if collision
+
+        entity = Entity_isentity(collision)
+        if entity > -1
+
+          `hurt entity
+          Entity_hurt(entity, Projectile(id).attack)
+
+          `destroy projectile
+          Projectile_delete(id, 0)
+          exist = 0
+          dec id
+
+        else
+
+          `position projectile at wall
+          set vector3 Projectile(id).position, sc_getstaticcollisionx(), sc_getstaticcollisiony(), sc_getstaticcollisionz()
+
+          `play hit sound
+          SmartSFX_play("projectile hit", 0, x vector3(Projectile(id).position), y vector3(Projectile(id).position), z vector3(Projectile(id).position))
+
+          `get reflected vector
+          speed = length vector3(Projectile(id).velocity)
+          set vector3 Projectile(id).velocity, sc_getcollisionbouncex(), sc_getcollisionbouncey(), sc_getcollisionbouncez()
+          normalize vector3 Projectile(id).velocity, Projectile(id).velocity
+          multiply vector3 Projectile(id).velocity, speed
+
+        endif
+        
+      endif
+
+      `save new position
+      if exist
+        position_object_to_vector3(object, Projectile(id).position, 0)
+        copy vector3 Projectile(id).oldposition, Projectile(id).position
+      endif
+
+    else
+    
+      Projectile_delete(id, 0)
+      dec id
+      
+    endif
+      
+  next id
+
+endfunction
+
+function Projectile_delete(id as dword, reset as boolean)
+
+  null = delete vector3(Projectile(id).position)
+  null = delete vector3(Projectile(id).oldposition)
+  null = delete vector3(Projectile(id).velocity)
+  
+  b3d remove object from billboard Projectile(id).object
+  delete object Projectile(id).object
+  
+  if reset = 0
+    array delete element Projectile(), id
+  endif
+
+endfunction
+
+function Projectile_reset()
+
+  local id
+
+  `delete all the projectiles
+  for id = 0 to array count(Projectile())
+    Projectile_delete(id, 1)
+  next id
+
+  `reset the array
+  empty array Projectile()
+
+endfunction

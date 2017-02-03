@@ -1,0 +1,32 @@
+[titles]
+:  title=Trampoline of Awesome
+[/titles]
+[objects]
+cube
+:  texture=grass3.jpg
+:  textureu=8
+:  texturev=8
+:  y=-2
+:  sx=10
+:  sz=10
+[/objects]
+[entities]
+Player
+:  y=2
+:  z=1
+[/entities]
+[water]
+Pool
+:  y=0
+:  z=3
+:  width=5
+:  length=5
+[/water]
+[sky]
+MassiveMountain
+[/sky]
+[music]
+Hampster Dance.mp3
+[/music]
+[script]
+[/script]

@@ -1,0 +1,71 @@
+REM *** Include File: Spinner.dba ***
+REM Created: 7/31/2007 7:09:53 AM
+REM
+REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\Mekal\Mekal.dbpro
+REM
+
+type aSpinner
+
+  object as dword
+  
+  `vector
+  spin as dword
+
+endtype
+
+function Spinner_init()
+
+  dim Spinner() as aSpinner
+
+endfunction
+
+`create a new spinner with an object number and the milliseconds per revolution
+function Spinner_new(object as dword, speedx as float, speedy as float, speedz as float)
+
+  local id as dword
+
+  add to queue Spinner()
+  id = array count(Spinner())
+
+  Spinner().object = object
+  Spinner().spin = make_vector3(speedx, speedy, speedz)
+
+endfunction id
+
+function Spinner_update()
+
+  local id
+
+  for id = 0 to array count(Spinner())
+    rotate object Spinner(id).object, object angle x(Spinner(id).object) + x vector3(Spinner(id).spin) * Tbm.factor, object angle y(Spinner(id).object) + y vector3(Spinner(id).spin) * Tbm.factor, object angle z(Spinner(id).object) + z vector3(Spinner(id).spin) * Tbm.factor
+    if sc_collisionstatus(Spinner(id).object)
+      sc_updateobject Spinner(id).object
+    endif
+  next id
+
+endfunction
+
+function Spinner_reset()
+
+  local id
+  
+  for id = 0 to array count(Spinner())
+    null = delete vector3(Spinner(id).spin)
+  next id
+
+  empty array Spinner()
+
+endfunction
+
+`returns id if the object is a spinner
+function Spinner_isspinner(object as dword)
+
+  local id
+
+  for id = 0 to array count(Spinner())
+    if Spinner(id).object = object
+      exitfunction id
+    endif
+  next id
+
+endfunction -1

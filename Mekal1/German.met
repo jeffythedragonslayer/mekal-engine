@@ -1,0 +1,16 @@
+:  objectname=German.dbo
+:  controller = enemy
+:  scale=0.5
+:  ry=180
+:  yoffset=0.96258109808
+:  health=20
+:  speed=0.06
+:  jumpspeed=0.2
+:  jumpdelay=800
+:  defense=1
+:  bulletlife=10000
+:  AnimeIdle=25
+:  AnimeMove=50
+:  AnimeAttack=75
+:  AnimeImpact=85
+:  AnimeDie=135

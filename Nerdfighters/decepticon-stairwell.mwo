@@ -1,0 +1,95 @@
+[general]
+:  ambientlight = 15
+[/general]
+
+[entities]
+Player
+:  y = 4
+Decepticon
+:  x = 4
+:  y = 7
+:  z = 4
+Decepticon
+:  x = -4
+:  y = 7
+:  z = 4
+Decepticon
+:  x = 4
+:  y = 7
+:  z = -4
+Decepticon
+:  x = -4
+:  y = 7
+:  z = -4
+Decepticon
+:  y = 7
+Decepticon
+:  x = 2
+:  y = 7
+:  z = 2
+Decepticon
+:  x = -2
+:  y = 7
+:  z = 2
+Decepticon
+:  x = 2
+:  y = 7
+:  z = -2
+Decepticon
+:  x = -2
+:  y = 7
+:  z = -2
+Decepticon
+:  y = 7
+[/entities]
+
+[objects]
+
+decepticon-stairwell.dbo
+:  y = 0.75
+:  z = -0.6
+:  ry = 180
+:  textureuv = 8
+
+decepticon-door.dbo
+:  x = -0.1
+:  y = 5.011
+:  z = 9.893
+:  uspeed = -0.0025
+:  vspeed = 0.0025
+:  solid = false
+:  diffusered = 0
+:  diffusegreen = 0
+:  ry = 180
+
+:  link = todecepticon-hallway
+
+*
+
+:  x = 12.031
+:  y = -10
+:  z = 1
+:  uspeed = -0.0025
+:  vspeed = 0.0025
+:  solid = false
+:  diffusered = 0
+:  diffusegreen = 0
+:  ry = -115
+
+:  link = toemo-depository
+[/objects]
+
+[links]
+
+todecepticon-hallway
+:  world = decepticon-hallway
+:  linkto = todecepticon-stairwell
+toemo-depository
+:  world = emo-depository
+:  linkto = todecepticon-stairwell
+
+[/links]
+
+[music]
+music misty room.mp3
+[/music]

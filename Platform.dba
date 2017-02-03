@@ -1,0 +1,205 @@
+REM *** Include File: Platform.dba ***
+REM Created: 6/28/2007 7:08:35 AM
+REM
+REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\Mekal\Mekal.dbpro
+REM
+
+global Platform as Platform
+
+type Platform
+
+  `vectors
+  new as dword
+  old as dword
+  overshoot as dword
+
+endtype
+
+type aPlatform
+
+  object as dword
+
+  `vectors
+  position as dword
+  direction as dword
+  distance as dword
+  station1 as dword
+  station2 as dword
+  sgn as dword
+
+  wait1 as dword
+  wait2 as dword
+
+  vanishing as boolean
+
+  station as boolean
+  departtime as dword
+
+endtype
+
+function Platform_init()
+
+  dim Platform() as aPlatform
+  Platform.new = make_vector3(0, 0, 0)
+  Platform.old = make_vector3(0, 0, 0)
+  Platform.overshoot = make_vector3(0, 0, 0)
+
+endfunction
+
+function Platform_new(object as dword, x1 as float, y1 as float, z1 as float, x2 as float, y2 as float, z2 as float, speed as float, wait1 as dword, wait2 as dword, vanishing as boolean)
+
+  local id as dword
+  local vectorlength as float
+
+  add to queue Platform()
+  id = array count(Platform())
+
+  Platform().object = object
+  Platform().position = make_vector3(0, 0, 0)
+  set_vector3_to_object_position(Platform().position, object)
+  
+  Platform().station1 = make_vector3(x1, y1, z1)
+  Platform().station2 = make_vector3(x2, y2, z2)
+  
+  Platform().sgn = make_vector3(0, 0, 0)
+  subtract vector3 Platform().sgn, Platform().station2, Platform().station1
+  set vector3 Platform().sgn, sgn(x vector3(Platform().sgn)), sgn(y vector3(Platform().sgn)), sgn(z vector3(Platform().sgn))
+  
+  Platform().wait1 = wait1
+  Platform().wait2 = wait2
+  Platform().vanishing = vanishing
+  Platform().departtime = Tbm.now + wait1
+
+  Platform().distance = make_vector3(0, 0, 0)
+  Platform().direction = make_vector3(0, 0, 0)
+  subtract vector3 Platform().direction, Platform().station2, Platform().station1
+  normalize vector3 Platform().direction, Platform().direction
+  multiply vector3 Platform().direction, speed
+
+endfunction id
+
+function Platform_update()
+
+  local id
+  local object as dword
+
+  for id = 0 to array count(Platform())
+
+    object = Platform(id).object
+    if Platform(id).departtime
+      `*************************
+      `*** Waiting to Depart ***
+      `*************************
+      
+      `not moving
+      set vector3 Platform(id).distance, 0, 0, 0
+
+      if Tbm.now => Platform(id).departtime
+        `time to depart
+        Platform(id).station = 1 - Platform(id).station
+        Platform(id).departtime = 0
+      endif
+
+    else
+      `******************************
+      `*** Going to Next Location ***
+      `******************************
+      
+      `caclulate distance needed to be traveled
+      copy vector3 Platform(id).distance, Platform(id).direction
+      multiply vector3 Platform(id).distance, Tbm.factor
+
+      `find next location and move towards it
+      if Platform(id).station
+
+        `set stations
+        copy vector3 Platform.old, Platform(id).station2
+        copy vector3 Platform.new, Platform(id).station1
+
+        `move
+        add vector3 Platform(id).position, Platform(id).position, Platform(id).distance
+
+      else
+      
+        `set stations
+        copy vector3 Platform.old, Platform(id).station1
+        copy vector3 Platform.new, Platform(id).station2
+
+        `vanish platform if supposed to
+        if Platform(id).vanishing
+          copy vector3 Platform(id).position, Platform.old
+        endif
+        
+        `invert the direction the plarform is going
+        invert_vector3(Platform(id).distance)
+
+        `move
+        add vector3 Platform(id).position, Platform(id).position, Platform(id).distance
+
+      endif
+
+      `arriving at next location
+      subtract vector3 Platform.overshoot, Platform(id).position, Platform.old
+      set vector3 Platform.overshoot, sgn(x vector3(Platform.overshoot)), sgn(y vector3(Platform.overshoot)), sgn(z vector3(Platform.overshoot))
+
+      multiply vector3 Platform(id).sgn, (Platform(id).station*2.0) - 1
+      if is equal vector3(Platform.overshoot, Platform(id).sgn)
+
+        `snap platform to station
+        copy vector3 Platform(id).position, Platform.old
+
+        `set new departure time
+        if Platform(id).station
+          Platform(id).departtime = Platform(id).wait1
+        else
+          Platform(id).departtime = Platform(id).wait2
+        endif
+        inc Platform(id).departtime, Tbm.now
+
+      endif
+      divide vector3 Platform(id).sgn, (Platform(id).station*2.0) - 1
+      
+      `save position
+      position_object_to_vector3(object, Platform(id).position, 0)
+
+      `update collision data
+      if sc_collisionstatus(object)
+        if Spinner_isspinner(object) = -1
+          sc_updateobject object
+        endif
+      endif
+
+    endif
+
+  next id
+
+endfunction
+
+function Platform_reset()
+
+  local id
+
+  for id = 0 to array count(Platform())
+    null = delete vector3(Platform(id).position)
+    null = delete vector3(Platform(id).station1)
+    null = delete vector3(Platform(id).station2)
+    null = delete vector3(Platform(id).direction)
+    null = delete vector3(Platform(id).sgn)
+  next id
+
+  empty array Platform()
+
+endfunction
+
+`returns id if the object is a platform
+function Platform_isplatform(object as dword)
+
+  local id
+  
+  for id = 0 to array count(Platform())
+    if Platform(id).object = object
+      exitfunction id
+    endif
+  next id
+
+endfunction -1

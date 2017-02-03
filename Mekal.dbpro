@@ -1,0 +1,74 @@
+; **** DarkBASIC Professional Project ****
+; Created by CodeSurge IDE
+version=DBP1.00
+project name=Mekal
+
+; ****Source file information****
+main=Mekal.dba
+include1=System.dba
+include2=GameLoop.dba
+include3=Tbm.dba
+include4=Inp.dba
+include5=Virtualizer.dba
+include6=World.dba
+include7=Console.dba
+include8=Camera\Camera.dba
+include9=Camera\Intellizone.dba
+include10=Gamma.dba
+include11=ImgCache.dba
+include12=Water.dba
+include13=Scroll.dba
+include14=Platform.dba
+include15=Spinner.dba
+include16=Trampoline.dba
+include17=Projectile.dba
+include18=AntiGravityZone.dba
+include19=Shadow.dba
+include20=Entity\Entity.dba
+include21=Entity\EntityTemplate.dba
+include22=Entity\EntityControls.dba
+include23=Entity\EntityAnime.dba
+include24=Link\Link.dba
+include25=Link\LinkObj.dba
+include26=Rts.dba
+include27=FadeObj.dba
+include28=DynamicMusic.dba
+include29=SmartSFX.dba
+include30=HUD.dba
+include31=Vector.dba
+include32=Miscellaneous.dba
+final source=_Temp.dbsource
+
+;***Executable filename***
+executable=Mekal.exe
+build type=exe
+
+compression=NO
+encryption=NO
+card options window=NO
+
+; Debugger
+CLI=NO
+
+; *****Display Settings*****
+app title=Mekal
+graphics mode=window
+fullscreen resolution=640x480x16
+window resolution=1280x1024
+
+
+;*****Media files, icons, cursors*****
+media root path=C:\Program Files\The Game Creators\Dark Basic Professional\Projects\Mekal\
+icon1=mekal.ico
+
+;****Version Information****
+VerComments=
+VerCompany=Jeff Linahan
+VerFileDesc=Mekal
+VerFileNumber=
+VerInternal=Mekal.exe
+VerCopyright=Copyright (C) 2007 - 2008 Jeff Linahan
+VerTrademark=
+VerFilename=Mekal.exe
+VerProduct=Mekal
+VerProductNumber=v0.7.1.2

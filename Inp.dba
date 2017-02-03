@@ -1,0 +1,114 @@
+REM *** Include File: Inp.dba ***
+REM Created: 5/24/2007 3:03:07 PM
+REM
+REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\Mekal\Mekal.dbpro
+REM
+
+`Inp collects data from all kinds of input devices and unifies it for abstaction of control
+
+#constant INP_KEYBOARD_SLIDE_SENSITIVITY = 64.0
+#constant INP_MOUSE_SLIDE_SENSITIVITY = 1000.0
+
+global Inp as Inp
+
+type Inp
+
+  mode as byte
+  #constant deviceMOUSE = 0
+  #constant deviceJOYSTICK = 1
+  #constant deviceKEYBOARD = 2
+
+  keymode as byte
+  #constant keymodeWASD = 0
+  #constant keymodeARROW = 1
+  #constant keymodeBOTH = 2
+
+  x as float
+  y as float
+
+  twistz as float
+
+  slide as float
+
+  push1 as boolean
+  push2 as boolean
+  push3 as boolean
+
+  target as boolean
+
+  mouseoffset as float
+
+endtype
+
+`collect input data and cache it
+function Inp_update()
+
+  local clicktotal as byte
+
+  Inp.target = keystate(44) || keystate(52)
+
+  select Inp.mode
+
+    case deviceJOYSTICK
+
+      Inp.x = joystick x() / 1000.0
+      Inp.y = joystick y() / 1000.0
+      Inp.twistz = (joystick twist z() / 32767.0) - 1
+      Inp.push1 = joystick fire a()
+      Inp.push2 = joystick fire b()
+      Inp.push3 = joystick fire c()
+      Inp.slide = 1 - (joystick slider a() / 65535.0)
+
+    endcase
+
+    case deviceKEYBOARD
+
+      Inp.x = (((Inp.keymode > 0) && rightkey()) || ((Inp.keymode <> 1) && keystate(32))) - (((Inp.keymode > 0) && leftkey()) || ((Inp.keymode <> 1) && keystate(30)))
+      Inp.y = (((Inp.keymode > 0) && downkey()) || ((Inp.keymode <> 1) && keystate(31))) - (((Inp.keymode > 0) && upkey()) || ((Inp.keymode <> 1) && keystate(17)))
+      Inp.push1 = controlkey()
+      Inp.push2 = spacekey()
+      Inp.push3 = keystate(42)
+
+       `slide
+      inc Inp.slide, (keystate(13) - keystate(12)) * Tbm.factor / INP_KEYBOARD_SLIDE_SENSITIVITY
+      if Inp.slide < 0
+        Inp.slide = 0
+      else
+        if Inp.slide > 1
+          Inp.slide = 1
+        endif
+      endif
+
+    endcase
+
+    case deviceMOUSE
+
+      `movement data
+      Inp.x = (mousex()*2.0 / x vector3(screen)) - 1
+      Inp.y = (mousey()*2.0 / y vector3(screen)) - 1
+
+      clicktotal = mouseclick()
+
+      Inp.push3 = clicktotal >> 3
+      Inp.push2 = (clicktotal && %0010) >> 1
+      Inp.push1 = clicktotal << 7
+
+      `scroller
+      Inp.slide = (mousez() - Inp.mouseoffset) / INP_MOUSE_SLIDE_SENSITIVITY
+      if Inp.slide < 0
+        `scrolled too far out, compensate
+        inc Inp.mouseoffset, Inp.slide * INP_MOUSE_SLIDE_SENSITIVITY
+        Inp.slide = 0
+      else
+        if Inp.slide > 1
+          `scrolled too far in, compensate
+          inc Inp.mouseoffset, (Inp.slide - 1) * INP_MOUSE_SLIDE_SENSITIVITY
+          Inp.slide = 1
+        endif
+      endif
+
+    endcase
+
+  endselect
+
+endfunction

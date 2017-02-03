@@ -1,0 +1,53 @@
+REM *** Include File: Tbm.dba ***
+REM Created: 5/6/2007 12:29:35 PM
+REM
+REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\Mekal\Mekal.dbpro
+REM
+
+global Tbm as Tbm
+
+type Tbm
+
+  targetfps as float
+  realfps as float
+  boot as dword
+  pause as dword
+  factor as float
+  now as dword
+
+endtype
+
+function Tbm_init(fps as float)
+
+  Tbm.boot = timer()
+  Tbm.targetfps = fps
+
+endfunction
+
+`discards all time passed since last update
+function Tbm_cut()
+
+  local time as dword
+  
+  time = timer()
+
+  Tbm.pause = time - Tbm.boot - Tbm.now
+  Tbm.now = time - Tbm.boot - Tbm.pause - 1000.0/Tbm.realfps
+
+endfunction
+
+`updates timer system
+function Tbm_update()
+
+  local now as dword
+  local took as dword
+  local factor as float
+
+  now = timer() - Tbm.boot - Tbm.pause
+  took = now - Tbm.now
+  Tbm.now = now
+
+  Tbm.realfps = 1000.0/took
+  Tbm.factor = Tbm.targetfps/Tbm.realfps
+
+endfunction

@@ -1,0 +1,65 @@
+[titles]
+:  title=Planet Kipe
+:  subtitle=(Fairy Fountain)
+:  subtitlered=0
+:  subtitlegreen=0
+[/titles]
+[objects]
+atrium.x
+fountain.x
+[/objects]
+[water]
+Flooded
+:  y=3
+:  width=20
+:  length=28
+:  depth=5
+:  amplitude=3
+:  period=10000
+[/water]
+[entities]
+Player
+:  x=0
+:  y=2
+:  z=0
+[/entities]
+[links]
+toKijia
+:  world=Kijia
+:  linkto=toFountain
+:  y=0.5
+:  z=-6
+toSlide
+:  world=Slide
+:  linkto=toFountain
+:  x=1
+:  y=50
+:  z=0
+:  rx=90
+[/links]
+[intellizones]
+underwater
+:  x=0
+:  y=1
+:  z=-6.25
+:  radius=3
+:  extrapolation=0.1
+[/intellizones]
+[antigravityzones]
+main
+:  x1=-0.5
+:  y1=0
+:  z1=-0.5
+:  x2=0.5
+:  y2=100
+:  z2=0.5
+[/antigravityzones]
+[sky]
+MassiveMountain
+[/sky]
+[music]
+BK_2_treasure_trove_cove.mp3
+:  radius=0
+029_treasure_trove_cove_(underwater).mp3
+:  radius=-1
+[/music]

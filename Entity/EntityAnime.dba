@@ -1,0 +1,145 @@
+REM *** Include File: EntityAnime.dba ***
+REM Created: 9/21/2007 5:30:27 PM
+REM 
+REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\Mekal\Mekal.dbpro
+REM 
+
+type EntityAnime
+
+  templatename as string
+  name as string
+  startframe as dword
+  endframe as dword
+
+endtype
+
+function EntityAnime_init()
+
+  dim EntityAnime() as EntityAnime
+  
+endfunction
+
+function EntityAnime_new(templatename as string, name as string, startframe as dword, endframe as dword)
+
+  local id as dword
+  
+  add to queue EntityAnime()
+  id = array count(EntityAnime())
+
+  EntityAnime().templatename = templatename
+  EntityAnime().name = name
+  EntityAnime().startframe = startframe
+  EntityAnime().endframe = endframe
+  
+endfunction id
+
+function EntityAnime_find(templatename as string, name as string)
+
+  local id
+
+  for id = 0 to array count(EntityAnime())
+    if EntityAnime(id).templatename = templatename && EntityAnime(id).name = name
+      exitfunction id
+    endif
+  next id
+
+endfunction -1
+
+function EntityAnime_play(entity as dword, animation as string)
+
+  local anime
+  
+  `if already playing the right one quit
+  if animation = Entity(entity).anime
+    exitfunction
+  endif
+
+  `precedence
+  if Entity(entity).anime = "Impact"
+    if animation = "Move"
+      exitfunction 0
+    endif
+  endif
+
+  `search for animation
+  anime = EntityAnime_find(EntityTemplate(Entity(entity).template).name, animation)
+
+  `if animation not found quit
+  if anime = -1
+    exitfunction 0
+  endif
+  
+  Entity(entity).anime = animation
+  if animation = "Idle"
+    loop object Entity(entity).object, EntityAnime(anime).startframe, EntityAnime(anime).endframe
+    Entity(entity).idletime = Tbm.now
+  else
+    play object Entity(entity).object, EntityAnime(anime).startframe, EntityAnime(anime).endframe
+  endif
+
+endfunction 1
+
+function EntityAnime_pause()
+
+  local id as dword
+  
+  for id = 0 to array count(Entity())
+    if Entity(id).notexist = 0
+      set object speed Entity(id).object, 0
+    endif
+  next id
+
+endfunction
+
+function EntityAnime_update(entity as dword)
+
+  local idleanime as dword
+  
+  `if entity no longer exists exit
+  if Entity(entity).notexist
+    exitfunction
+  endif
+
+  `only idle if entity isn't dead
+  if Entity(entity).dead = 0
+    if object playing(Entity(entity).object)
+      `if entity is idling and is ready to fidget
+      if Entity(entity).anime = "Idle" && Tbm.now > Entity(entity).idletime + EntityTemplate(Entity(entity).template).fidgetdelay
+        EntityAnime_play(entity, "Fidget")
+      endif
+    else
+      EntityAnime_play(entity, "Idle")
+    endif
+  endif
+  
+  `timer based animation
+  set object speed Entity(entity).object, MEKAL_ANIMATION_SPEED * Tbm.factor
+
+endfunction
+
+function EntityAnime_reset(preserveplayer as boolean)
+
+  local id
+  local playertemplatename as string
+  
+  if preserveplayer
+  
+    playertemplatename = EntityTemplate(Entity(Entity.player).template).name
+
+    for id = 0 to array count(EntityAnime())
+      `only delete non-player animations
+      if EntityAnime(id).templatename <> playertemplatename
+        array delete element EntityAnime(), id
+      else
+        inc id
+      endif
+    next id
+    
+  else
+  
+    `delete everything
+    empty array EntityAnime()
+    
+  endif
+
+endfunction

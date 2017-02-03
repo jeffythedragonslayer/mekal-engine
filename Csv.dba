@@ -1,0 +1,48 @@
+REM *** Include File: Csv.dba ***
+REM Created: 12/16/2007 8:19:50 AM
+REM
+REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\Mekal\Mekal.dbpro
+REM
+
+global Csv_str as string
+
+`adds one or more values to the csv system
+function Csv_addval(str as string)
+
+  `add a preceding comma if there already are values
+  if len(Csv_str) then str = "," + str
+
+  Csv_str = Csv_str + str
+
+endfunction
+
+`retrives a value from the csv system
+function Csv_getval()
+
+  local value as string
+  local firstcomma as dword
+
+  `return "CSV_EMPTY" if there are no values left
+  if len(Csv_str) = 0 then exitfunction "CSV_EMPTY"
+
+  firstcomma = str find char(Csv_str, ",", 1)
+  if firstcomma
+    `there is more than one value, so return everything left of the comma
+    value = left$(Csv_str, firstcomma - 1)
+    Csv_str = right$(Csv_str, len(Csv_str) - firstcomma)
+  else
+    `this is the last value, so return all that's left
+    value = Csv_str
+    Csv_reset()
+  endif
+
+  value = trim$(value)
+
+endfunction value
+
+`resets the csv system
+function Csv_reset()
+
+  Csv_str = ""
+
+endfunction

@@ -1,0 +1,79 @@
+[titles]
+:  title=The Legend of Zelda
+:  subtitle=(Snowpeak)
+[/titles]
+[sky]
+SnowMountain
+[/sky]
+[objects]
+slide.x
+:  texture=snow.bmp
+:  textureu=7
+:  texturev=7
+ChipMesh.x
+:  x=-8
+:  y=-5
+:  z=6
+:  turnspeedy=1
+:  scale=0.2
+*
+:  x=-7
+:  y=2
+:  z=4
+:  turnspeedy=4
+:  scale=0.05
+cube
+:  sy=0.2
+:  z=5
+:  y=-3
+:  x=-5
+:  bounce=3
+:  texture=candies.png
+:  textureu=0.5
+:  texturev=0.5
+cube
+:  scale=40
+:  sy=0.5
+:  y=-8
+:  bounce=8
+:  texture=candies.png
+:  textureu=10
+:  texturev=10
+cube
+:  scale=8
+:  rx=45
+:  z=-5
+:  sy=0.1
+[/objects]
+[entities]
+Player
+:  y=10
+:  z=3
+[/entities]
+[links]
+toOutsideMekalTemple
+:  world=OutsideMekalTemple
+:  linkto=toSlide
+:  x=5
+:  y=6
+:  z=1
+:  ry=270
+toFountain
+:  world=Fountain
+:  linkto=toSlide
+:  x=-4
+:  y=-3
+:  z=0
+:  ry=90
+:  width=10
+[/links]
+[intellizones]
+main
+:  x=-8
+:  z=10
+:  extrapolation=0.4
+[/intellizones]
+[music]
+103_-_snowboarding.mp3
+:  radius=0
+[/music]

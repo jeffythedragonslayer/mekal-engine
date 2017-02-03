@@ -1,0 +1,434 @@
+REM *** Include File: World.dba ***
+REM Created: 5/22/2007 3:27:14 PM
+REM
+REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\Mekal\Mekal.dbpro
+REM 
+
+`The World system keeps track of which objects are in the currently loaded area
+
+function World_init()
+
+  #constant SC_WORLD = 1
+  dim World_objs() as dword
+
+endfunction
+
+`adds an object to the World system
+function World_addobj(object as dword, collision as boolean)
+
+  local id as dword
+
+  add to queue World_objs()
+  id = array count(World_objs())
+  
+  World_objs() = object
+  if collision
+    sc_setupcomplexobject object, SC_WORLD, 2
+  endif
+
+endfunction id
+
+`removes the currently loaded world from memory
+function World_reset()
+
+  local id
+
+  `delete all the objects
+  for id = 0 to array count(World_objs())
+    if sc_collisionstatus(World_objs(id))
+      sc_removeobject World_objs(id)
+    endif
+    if object exist(World_objs(id))
+      delete object World_objs(id)
+    endif
+  next id
+
+  `reset the array
+  empty array World_objs()
+
+endfunction
+
+function Virtualizer_Objects()
+
+  local objectname as string
+  local masterobject as dword
+  
+  do
+  
+    Virtualizer_getvar(0)
+
+    if Virtualizer.type = VIRTUALIZER_VARIABLE
+      `set object variables
+      select Virtualizer.var
+        case "texture"
+          texture = Virtualizer.value
+        endcase
+        case "textureu"
+          textureu = val(Virtualizer.value)
+        endcase
+        case "texturev"
+          texturev = val(Virtualizer.value)
+        endcase
+        case "textureuv"
+          textureuv = val(Virtualizer.value)
+        endcase
+        case "diffusered"
+          diffusered = val(Virtualizer.value)
+        endcase
+        case "diffusegreen"
+          diffusegreen = val(Virtualizer.value)
+        endcase
+        case "diffuseblue"
+          diffuseblue = val(Virtualizer.value)
+        endcase
+        case "link"
+          link = Virtualizer.value
+        endcase
+        case "x"
+          x = val(Virtualizer.value) * MEKAL_SCALAR
+          x2 = x
+        endcase
+        case "y"
+          y = val(Virtualizer.value) * MEKAL_SCALAR
+          y2 = y
+        endcase
+        case "z"
+          z = val(Virtualizer.value) * MEKAL_SCALAR
+          z2 = z
+        endcase
+        case "rx"
+          rx = val(Virtualizer.value)
+        endcase
+        case "ry"
+          ry = val(Virtualizer.value)
+        endcase
+        case "rz"
+          rz = val(Virtualizer.value)
+        endcase
+        case "sx"
+          sx = val(Virtualizer.value) * MEKAL_SCALAR
+        endcase
+        case "sy"
+          sy = val(Virtualizer.value) * MEKAL_SCALAR
+        endcase
+        case "sz"
+          sz = val(Virtualizer.value) * MEKAL_SCALAR
+        endcase
+        case "x2"
+          x2 = val(Virtualizer.value) * MEKAL_SCALAR
+        endcase
+        case "y2"
+          y2 = val(Virtualizer.value) * MEKAL_SCALAR
+        endcase
+        case "z2"
+          z2 = val(Virtualizer.value) * MEKAL_SCALAR
+        endcase
+        case "posscale"
+          posscale = val(Virtualizer.value)
+        endcase
+        case "speed"
+          speed = val(Virtualizer.value) * MEKAL_SCALAR
+          shadow = 1
+        endcase
+        case "wait1"
+          wait1 = val(Virtualizer.value)
+        endcase
+        case "wait2"
+          wait2 = val(Virtualizer.value)
+        endcase
+        case "vanishing"
+          vanishing = val(Virtualizer.value)
+        endcase
+        case "turnspeedx"
+          turnspeedx = val(Virtualizer.value)
+        endcase
+        case "turnspeedy"
+          turnspeedy = val(Virtualizer.value)
+        endcase
+        case "turnspeedz"
+          turnspeedz = val(Virtualizer.value)
+        endcase
+        case "uspeed"
+          uspeed = val(Virtualizer.value)
+        endcase
+        case "vspeed"
+          vspeed = val(Virtualizer.value)
+        endcase
+        case "bounce"
+          bounce = val(Virtualizer.value)
+        endcase
+        case "ghosting"
+          ghosting = val(Virtualizer.value)
+        endcase
+        case "fading"
+          fading = val(Virtualizer.value)
+        endcase
+        case "culling"
+          select Virtualizer.value
+            case "true"
+              culling = 1
+            endcase
+            case "false"
+              culling = 0
+            endcase
+          endselect
+        endcase
+        case "billboarding"
+          select Virtualizer.value
+            case "true"
+              billboarding = 1
+            endcase
+            case "disableyalign"
+              billboarding = 1
+              disableyalign = 1
+            endcase
+          endselect
+        endcase
+        case "shadow"
+          select Virtualizer.value
+            case "true"
+              shadow = 1
+            endcase
+            case "false"
+              shadow = 0
+            endcase
+          endselect
+        endcase
+        case "solid"
+          collision = (Virtualizer.value = "true")
+        endcase
+        case "visible"
+          select Virtualizer.value
+            case "true"
+              visible = 1
+            endcase
+            case "false"
+              visible = 0
+            endcase
+          endselect
+        endcase
+        case "alpha"
+          alpha = val(Virtualizer.value)
+          if alpha = 0
+            visible = 0
+          endif
+        endcase
+        case "scale"
+          sx = sx * val(Virtualizer.value)
+          sy = sy * val(Virtualizer.value)
+          sz = sz * val(Virtualizer.value)
+        endcase
+      endselect
+    else
+      `either this is the start of a new object, or the end of the entire tag
+      `either way, if there's an object in memory we want to create it
+
+      if objectname
+        `time to create the object before the data gets deleted
+
+        if objectname = "*"
+          `copy previous object
+          if collision || fast len(link)
+            object = b3d clone object(masterobject)
+          else
+            object = b3d instance object(masterobject)
+          endif
+        else
+        
+          if fast left$(objectname, 5) = "text:"
+            `object is text
+            object = make3Dtext(fast right$(objectname, fast len(objectname)-5))
+          else
+        
+            `primitive object
+            select objectname
+              case "sphere"
+                object = b3d make object sphere(1)
+              endcase
+              case "cube"
+                object = b3d make object cube(1)
+              endcase
+              case "plane"
+                object = b3d make object plain(1, 1)
+              endcase
+              case default
+              
+                `new object
+                if file exist(objectname) = 0
+                  System_Error("Object " + objectname + " does not exist.")
+                endif
+                object = b3d load object(objectname)
+                masterobject = object
+                
+              endcase
+            endselect
+          endif
+
+        endif
+
+        `rotation
+        rotate object object, rx, ry, rz
+        `fix object pivot object
+        
+        `scaling
+        scale object object, sx*100, sy*100, sz*100
+        
+        `positioning
+        if posscale - 1.0
+          x = x * posscale
+          y = y * posscale
+          z = z * posscale
+          x2 = x2 * posscale
+          y2 = y2 * posscale
+          z2 = z2 * posscale
+        endif
+        position object object, x, y, z
+        
+        `visible
+        if visible
+        
+          `texturing
+          if texture
+            texture object object, ImgCache_fetch(texture)
+          endif
+          textureu = textureu * textureuv
+          texturev = texturev * textureuv
+          if textureu <> 1 or texturev <> 1
+            scale object texture object, textureu, texturev
+          endif
+
+          `culling
+          set object cull object, culling
+          
+          `ghosting
+          if ghosting
+            ghost object on object, ghosting
+          endif
+          
+          `alphablending
+          if (alpha < 100) && alpha
+            set alpha mapping on object, alpha
+          endif
+          
+          `fading
+          if fading <> 100
+            fade object object, fading
+          endif
+          
+          `diffuse
+          if (diffusered < 255) || (diffusegreen < 255) || (diffuseblue < 255)
+            set object diffuse object, rgb(diffusered, diffusegreen, diffuseblue)
+          endif
+          
+        else
+        
+          exclude object on object
+          
+        endif
+        
+        `******************************************
+        `* object is ready to be added to systems *
+        `******************************************
+        
+        `collision must be off if object is a link
+        if fast len(link)
+          collision = 0
+        endif
+
+        `add to world system
+        World_addobj(object, collision)
+        
+        `add to linkobj subsystem
+        if fast len(link)
+          LinkObj_new(object, link)
+        endif
+
+        `add to platform system
+        if speed
+          Platform_new(object, x, y, z, x2, y2, z2, speed, wait1, wait2, vanishing)
+        endif
+        
+        `add to spinner system
+        if turnspeedx || turnspeedy || turnspeedz
+          Spinner_new(object, turnspeedx, turnspeedy, turnspeedz)
+        endif
+
+        `add to scroll system
+        if uspeed || vspeed
+          Scroll_new(object, uspeed, vspeed)
+        endif
+        
+        `add to trampoline system
+        if bounce
+          Trampoline_new(object, bounce)
+        endif
+        
+        `add to shadow system
+        if shadow
+          Shadow_new(object, 0)
+        endif
+
+        `add to billboarding system
+        if billboarding
+          b3d object to billboard object
+          if disableyalign
+            b3d disable yalign object
+          endif
+        endif
+
+      endif
+
+      if Virtualizer.type = VIRTUALIZER_EXIT
+        exitfunction
+      endif
+
+      `new object, reset variables
+      local object as dword
+      local collision as boolean = 1
+      local texture as string
+      local textureu as float = 1.0
+      local texturev as float = 1.0
+      local textureuv as float = 1.0
+      local diffusered as byte = 255
+      local diffusegreen as byte = 255
+      local diffuseblue as byte = 255
+      local culling as boolean = 1
+      local visible as boolean = 1
+      local ghosting as byte
+      local alpha as byte = 100
+      local fading as dword = 100
+      local rx as float
+      local ry as float
+      local rz as float
+      local sx as float = MEKAL_SCALAR
+      local sy as float = MEKAL_SCALAR
+      local sz as float = MEKAL_SCALAR
+      local x as float
+      local y as float
+      local z as float
+      local link as string
+      local x2 as float
+      local y2 as float
+      local z2 as float
+      local posscale as float = 1.0
+      local speed as float
+      local wait1 as float
+      local wait2 as float
+      local vanishing as boolean
+      local turnspeedx as float
+      local turnspeedy as float
+      local turnspeedz as float
+      local uspeed as float
+      local vspeed as float
+      local bounce as float
+      local shadow as boolean
+      local billboarding as boolean
+      local disableyalign as boolean
+
+      objectname = Virtualizer.name
+      
+    endif
+
+  loop
+
+endfunction

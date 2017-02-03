@@ -1,0 +1,154 @@
+[titles]
+:  title=Planet Kipe
+:  subtitle=(outside Mekal Temple)
+[/titles]
+[objects]
+clearing.x
+tunnel.x
+shamanhut.x
+cube
+:  x=-3
+:  x2=-1
+:  y=2
+:  y2=4
+:  speed=0.01
+:  turnspeedx=-0.01
+:  turnspeedy=0.3
+:  turnspeedz=5
+:  texture=candies.png
+saucer.x
+:  x=-20
+:  z=5
+:  y=8
+:  x2=20
+:  y2=8
+:  z2=-1
+:  speed=0.3
+:  wait1=0
+:  wait2=0
+:  scale=0.02
+:  turnspeedy=8
+*
+:  x=-17
+:  y=7
+:  z=3
+:  x2=23
+:  y2=12
+:  z2=3
+:  speed=0.35
+:  wait1=0
+:  wait2=0
+:  scale=0.02
+:  turnspeedy=8
+Crate_Cube01.x
+:  y=-3
+:  z2=5
+:  y2=10
+:  speed=0.05
+:  wait1=1000
+:  wait2=1000
+:  scale=0.02
+cube
+:  y=0.5
+:  z=-2
+:  z2=-4
+:  x2=10
+:  y2=0.5
+:  speed=0.01
+:  wait1=100
+:  wait2=100
+:  scale=1.25
+:  texture=candies.png
+cube
+:  scale=40
+:  sy=0.5
+:  y=-8
+:  texture=candies.png
+:  textureu=10
+:  texturev=10
+:  bounce=25
+cube
+:  x=4
+:  sy=0.2
+:  bounce=2
+:  texture=candies.png
+:  textureu=0.5
+:  texturev=0.5
+plant.x
+:  x=-2
+:  z=2
+:  scale=0.5
+:  solid=false
+:  culling=false
+*
+:  x=2
+:  z=-1
+:  scale=0.7
+:  solid=false
+:  culling=false
+[/objects]
+[lights]
+Torch
+:  x=2
+:  y=1.2
+:  red=255
+:  green=0
+:  blue=0
+:  halo=halo01.jpg
+[/lights]
+[particles]
+Torch
+:  x=4
+:  y=1.2
+:  texture=FireBall.bmp
+:  type=flames
+[/particles]
+[entities]
+Player
+:  x=0
+:  y=0.375
+:  z=0
+German
+:  x=1
+:  y=2
+:  z=0
+German
+:  x=2
+:  y=4
+:  z=-1
+[/entities]
+[links]
+toKijia
+:  world=Kijia
+:  linkto=toOutsideMekalTemple
+:  x=-7
+:  y=.5
+:  z=11
+:  ry=180
+:  width=2
+:  height=2
+toTestLevel
+:  world=TestLevel
+:  linkto=toOutsideMekalTemple
+:  x=14.5
+:  y=.5
+:  z=3
+:  ry=270
+:  width=2
+:  height=2
+toSlide
+:  world=Slide
+:  linkto=toOutsideMekalTemple
+:  x=6.5
+:  y=.5
+:  z=-6
+:  height=1
+:  width=2
+[/links]
+[sky]
+MassiveMountain
+[/sky]
+[music]
+Good Egg Galaxy.mp3
+:  radius=0
+[/music]

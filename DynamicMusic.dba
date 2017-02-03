@@ -1,0 +1,285 @@
+REM *** Include File: DynamicMusic.dba ***
+REM Created: 9/29/2007 9:37:22 AM
+REM
+REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\Mekal\Mekal.dbpro
+REM 
+
+#constant DYNAMIC_MUSIC_DEFAULT = 0
+#constant DYNAMIC_MUSIC_WATER = 1
+#constant DYNAMIC_MUSIC_BLENDDURATION_STD = 2000
+
+type DynamicMusic
+
+  new
+  old
+  
+  volume as byte
+  blendstart as dword
+  blendduration as dword
+  blended as boolean
+
+endtype
+
+type aDynamicMusic
+
+  id
+  radius as float
+  
+  `vector
+  position as dword
+  
+endtype
+
+function DynamicMusic_init()
+
+  local id as dword
+  
+  global DynamicMusic as DynamicMusic
+  DynamicMusic.new = -1
+  DynamicMusic.old = -1
+  
+  dim DynamicMusic(DYNAMIC_MUSIC_WATER) as aDynamicMusic
+  
+  for id = 0 to DYNAMIC_MUSIC_WATER
+    DynamicMusic(id).id = -1
+  next id
+  
+endfunction
+
+function DynamicMusic_new(filename as string, x as float, y as float, z as float, radius as float)
+
+  local id as dword
+
+  if radius > 0
+    add to queue DynamicMusic()
+    id = array count(DynamicMusic())
+  else
+    if radius
+      id = DYNAMIC_MUSIC_WATER
+    else
+      id = DYNAMIC_MUSIC_DEFAULT
+    endif
+    
+    `delete existing music
+    if DynamicMusic(id).id > -1
+      delete music DynamicMusic(id).id
+    endif
+    
+  endif
+  
+  if file exist(filename) = 0
+    System_Error("Music file " + filename + " does not exist.")
+  endif
+  DynamicMusic(id).id = msc load music(filename)
+  set music volume DynamicMusic(id).id, 0
+  DynamicMusic().position = make_vector3(x, y, z)
+  DynamicMusic(id).radius = radius
+
+endfunction id
+
+`1 is pause
+`0 is unpause
+function DynamicMusic_pause(pause as boolean)
+
+  local id
+  
+  for id = 0 to array count(DynamicMusic())
+  
+    if DynamicMusic(id).id > -1
+      if pause
+        pause music DynamicMusic(id).id
+      else
+        play music DynamicMusic(id).id
+      endif
+    endif
+  
+  next id
+
+endfunction
+
+function DynamicMusic_update(changetrack as boolean)
+
+  local id
+
+  if changetrack
+
+    `check for underwater
+    if Water_pointin(x vector3(Camera.position), y vector3(Camera.position), z vector3(Camera.position), 2) > -1
+      DynamicMusic_blend(DYNAMIC_MUSIC_WATER, DYNAMIC_MUSIC_BLENDDURATION_STD)
+    else
+      `wasn't underwater, so check for zones
+      for id = DYNAMIC_MUSIC_WATER + 1 to array count(DynamicMusic())
+        if (x vector3(Camera.position) - x vector3(DynamicMusic(id).position))^2 + (y vector3(Camera.position) - y vector3(DynamicMusic(id).position))^2 + (z vector3(Camera.position) - z vector3(DynamicMusic(id).position))^2 <= DynamicMusic(id).radius^2
+          DynamicMusic_blend(id, DYNAMIC_MUSIC_BLENDDURATION_STD)
+          exit
+        endif
+      next id
+
+      `if not in a zone, play default music
+      if id > array count(DynamicMusic())
+        DynamicMusic_blend(DYNAMIC_MUSIC_DEFAULT, DYNAMIC_MUSIC_BLENDDURATION_STD)
+      endif
+
+    endif
+  endif
+  
+  `adjust volume
+  if DynamicMusic.blended = 0
+    if Tbm.now > DynamicMusic.blendstart + DYNAMIC_MUSIC_BLENDDURATION_STD
+      DynamicMusic_setvolume(100)
+    else
+      `prevent divide by zero error
+      if DynamicMusic.blendduration
+        DynamicMusic_setvolume(((Tbm.now - DynamicMusic.blendstart) * 100) / DynamicMusic.blendduration)
+      endif
+    endif
+  endif
+
+endfunction
+
+function DynamicMusic_setvolume(volume as byte)
+
+  if DynamicMusic.volume = volume
+    exitfunction
+  endif
+  DynamicMusic.volume = volume
+  
+  if volume = 100
+    DynamicMusic.blended = 1
+  endif
+  
+  `set new music
+  if DynamicMusic.new > -1
+    if DynamicMusic(DynamicMusic.new).id > -1
+      set music volume DynamicMusic(DynamicMusic.new).id, volume
+    endif
+  endif
+  
+  `set old music
+  if DynamicMusic.old > -1
+    if DynamicMusic(DynamicMusic.old).id > -1
+      set music volume DynamicMusic(DynamicMusic.old).id, 100 - volume
+    endif
+  endif
+
+endfunction
+
+function DynamicMusic_blend(id, blendduration as dword)
+
+  if id > -1
+    if DynamicMusic(id).id = -1
+      exitfunction
+    endif
+  endif
+  
+  if id = DynamicMusic.new
+    exitfunction
+  endif
+
+  `make sure old music is off
+  if DynamicMusic.old > -1
+    if DynamicMusic(DynamicMusic.old).id > -1
+      set music volume DynamicMusic(DynamicMusic.old).id, 0
+    endif
+  endif
+
+  `replace musics
+  DynamicMusic.old = DynamicMusic.new
+  DynamicMusic.new = id
+  
+  DynamicMusic.blendstart = Tbm.now
+  DynamicMusic.blendduration = blendduration
+  DynamicMusic.blended = 0
+  
+endfunction
+
+function DynamicMusic_reset()
+
+  local id
+
+  for id = 0 to array count(DynamicMusic())
+    null = delete vector3(DynamicMusic(id).position)
+    if DynamicMusic(id).id > -1
+      delete music DynamicMusic(id).id
+    endif
+  next id
+
+  empty array DynamicMusic()
+  DynamicMusic.volume = 0
+  DynamicMusic.blended = 0
+  DynamicMusic_init()
+
+endfunction
+
+`start looping all music
+function DynamicMusic_startloop()
+
+  local id as dword
+
+  DynamicMusic.old = -1
+  DynamicMusic.new = -1
+  
+  DynamicMusic_update(1)
+  DynamicMusic_setvolume(100)
+  
+  for id = 0 to array count(DynamicMusic())
+    if DynamicMusic(id).id > -1
+      loop music DynamicMusic(id).id
+    endif
+  next id
+  
+endfunction
+
+function Virtualizer_DynamicMusic()
+
+  if MEKAL_MUSIC = 0
+    exitfunction
+  endif
+
+  local musicname as string
+
+  do
+
+    Virtualizer_getvar(0)
+
+    if Virtualizer.type = VIRTUALIZER_VARIABLE
+      `set music variables
+      select Virtualizer.var
+        case "x"
+          x = val(Virtualizer.value) * MEKAL_SCALAR
+        endcase
+        case "y"
+          y = val(Virtualizer.value) * MEKAL_SCALAR
+        endcase
+        case "z"
+          z = val(Virtualizer.value) * MEKAL_SCALAR
+        endcase
+        case "radius"
+          radius = val(Virtualizer.value) * MEKAL_SCALAR
+        endcase
+      endselect
+    else
+
+      `time to create the music before the data gets deleted
+      if musicname
+        DynamicMusic_new(musicname, x, y, z, radius)
+      endif
+
+      if Virtualizer.type = VIRTUALIZER_EXIT
+        exit
+      endif
+
+      `new music, reset variables
+      local x as float
+      local y as float
+      local z as float
+      local radius as float
+      radius = 100 * MEKAL_SCALAR
+
+      musicname = Virtualizer.name
+
+    endif
+
+  loop
+
+endfunction

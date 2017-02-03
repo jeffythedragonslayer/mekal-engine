@@ -1,0 +1,131 @@
+REM *** Include File: FadeObj.dba ***
+REM Created: 9/3/2007 2:56:56 PM
+REM 
+REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\Mekal\Mekal.dbpro
+REM 
+
+type aFadeObj
+
+  object as dword
+  shadow
+
+  startalpha
+  endalpha
+
+  starttime as dword
+  length as dword
+  
+  deletedone as boolean
+
+endtype
+
+function FadeObj_init()
+
+  dim FadeObj() as aFadeObj
+
+endfunction
+
+function FadeObj_new(object as dword, startalpha as byte, endalpha as byte, starttime as dword, length as dword, deletedone as boolean)
+
+  local id as dword
+  
+  add to queue FadeObj()
+  id = array count(FadeObj())
+  
+  FadeObj().object = object
+  FadeObj().startalpha = startalpha
+  FadeObj().endalpha = endalpha
+  FadeObj().starttime = Tbm.now + starttime
+  FadeObj().length = length
+  FadeObj().deletedone = deletedone
+  
+  `find out if object has a shadow
+  FadeObj().shadow = Shadow_find(object)
+  if FadeObj().shadow > -1
+    FadeObj().shadow = Shadow(FadeObj().shadow).object
+  else
+    FadeObj().shadow = 0
+  endif
+  
+  `setup transparency
+  set object transparency FadeObj().object, 2
+  set alpha mapping on FadeObj(id).object, FadeObj(id).startalpha
+  if FadeObj().shadow
+    set alpha mapping on FadeObj(id).shadow, FadeObj(id).startalpha
+  endif
+
+endfunction id
+
+function FadeObj_update()
+
+  local id
+  local elapsed as float
+  local alpha as byte
+
+  for id = 0 to array count(FadeObj())
+
+    if Tbm.now => FadeObj(id).starttime + FadeObj(id).length
+
+      FadeObj_delete(id, 0)
+      dec id
+
+    else
+    
+      if Tbm.now => FadeObj(id).starttime
+      
+        elapsed = ((Tbm.now - FadeObj(id).starttime) / (FadeObj(id).length*1.0))
+        alpha = (elapsed * (FadeObj().endalpha - FadeObj().startalpha)) + FadeObj().startalpha
+
+        set alpha mapping on FadeObj(id).object, alpha
+        
+        `fade shadow too
+        if FadeObj(id).shadow > -1
+          set alpha mapping on FadeObj(id).shadow, alpha
+        endif
+
+      endif
+
+    endif
+
+  next id
+
+endfunction
+
+`remove object from fading system
+function FadeObj_delete(id as dword, reset as boolean)
+
+  local entityid
+  entityid = Entity_isentity(FadeObj(id).object)
+  
+  `if object is an entity then set it nonexistant
+  if entityid > -1
+    Entity(entityid).notexist = 1
+    if entityid = Entity.deadplayer
+      Entity.playerdied = 1
+    endif
+  endif
+
+  if FadeObj(id).deletedone
+    delete object FadeObj(id).object
+  else
+    `lock at correct alpha if not going to be deleted
+    set alpha mapping on FadeObj(id).object, FadeObj(id).endalpha
+  endif
+  
+  if reset = 0
+    array delete element FadeObj(), id
+  endif
+
+endfunction
+
+function FadeObj_reset()
+
+  local id
+
+  for id = 0 to array count(FadeObj())
+    FadeObj_delete(id, 1)
+  next id
+  
+  empty array FadeObj()
+  
+endfunction

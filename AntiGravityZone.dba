@@ -1,0 +1,135 @@
+REM *** Include File: AntiGravityZone.dba ***
+REM Created: 8/26/2007 9:45:25 AM
+REM 
+REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\Mekal\Mekal.dbpro
+REM
+
+type aAntiGravityZone
+
+  `vectors
+  point1 as dword
+  point2 as dword
+
+  gravity as float
+
+endtype
+
+function AntiGravityZone_init()
+
+  dim AntiGravityZone() as aAntiGravityZone
+
+endfunction
+
+function AntiGravityZone_new(x1 as float, y1 as float, z1 as float, x2 as float, y2 as float, z2 as float, gravity as float)
+
+  local id as dword
+
+  add to queue AntiGravityZone()
+  id = array count(AntiGravityZone())
+  
+  AntiGravityZone().point1 = make_vector3(x1, y1, z1)
+  AntiGravityZone().point2 = make_vector3(x2, y2, z2)
+  AntiGravityZone().gravity = gravity
+
+endfunction id
+
+function AntiGravityZone_pointin(x as float, y as float, z as float, checktop as boolean)
+
+  local id
+
+  for id = 0 to array count(AntiGravityZone())
+
+    if x => x vector3(AntiGravityZone(id).point1)
+      if y => y vector3(AntiGravityZone(id).point1)
+        if z => z vector3(AntiGravityZone(id).point1)
+          if x <= x vector3(AntiGravityZone(id).point2)
+            if (y <= y vector3(AntiGravityZone(id).point2)) || (checktop = 0)
+              if z <= z vector3(AntiGravityZone(id).point2)
+                exitfunction id
+              endif
+            endif
+          endif
+        endif
+      endif
+    endif
+
+  next id
+
+endfunction -1
+
+function AntiGravityZone_reset()
+
+  local id
+  
+  for id = 0 to array count(AntiGravityZone())
+  
+    null = delete vector3(AntiGravityZone(id).point1)
+    null = delete vector3(AntiGravityZone(id).point2)
+  
+  next id
+
+  empty array AntiGravityZone()
+
+endfunction
+
+function Virtualizer_AntiGravityZones()
+
+  local zonename as string
+
+  do
+
+    Virtualizer_getvar(0)
+
+    if Virtualizer.type = VIRTUALIZER_VARIABLE
+      `set particle variables
+      select Virtualizer.var
+        case "x1"
+          x1 = val(Virtualizer.value) * MEKAL_SCALAR
+        endcase
+        case "y1"
+          y1 = val(Virtualizer.value) * MEKAL_SCALAR
+        endcase
+        case "z1"
+          z1 = val(Virtualizer.value) * MEKAL_SCALAR
+        endcase
+        case "x2"
+          x2 = val(Virtualizer.value) * MEKAL_SCALAR
+        endcase
+        case "y2"
+          y2 = val(Virtualizer.value) * MEKAL_SCALAR
+        endcase
+        case "z2"
+          z2 = val(Virtualizer.value) * MEKAL_SCALAR
+        endcase
+        case "gravity"
+          gravity = val(Virtualizer.value)
+        endcase
+      endselect
+    else
+      `either this is the start of a new zone, or the end of the entire tag
+      `either way, if there's a zone in memory we want to create it
+
+      if zonename
+        AntiGravityZone_new(x1, y1, z1, x2, y2, z2, gravity)
+      endif
+
+      if Virtualizer.type = VIRTUALIZER_EXIT
+        exit
+      endif
+
+      `new zone, reset variables
+      local x1 as float
+      local y1 as float
+      local z1 as float
+      local x2 as float
+      local y2 as float
+      local z2 as float
+      local gravity as float = -1.0
+
+      zonename = Virtualizer.name
+
+    endif
+
+  loop
+  
+endfunction

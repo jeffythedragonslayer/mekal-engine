@@ -1,0 +1,161 @@
+[general]
+[/general]
+
+[entities]
+Player
+:  x = -2
+:  y = 2
+[/entities]
+
+[objects]
+
+emo-depository.dbo
+:  textureuv = 2
+
+decepticon-door.dbo
+:  x = -2.278
+:  z = -1.648
+:  uspeed = -0.0025
+:  vspeed = 0.0025
+:  solid = false
+:  diffusered = 0
+:  diffusegreen = 0
+
+:  link = todecepticon-stairwell
+
+text:Emo Depository
+:  x = -2
+:  y = 1
+:  z = 2.375
+:  scale = 0.5
+:  texture = rgb: 0, 255, 255
+:  solid = false
+
+cube
+:  x = 3.25
+:  y = 0.375
+:  z = 1.8
+:  texture = crate.bmp
+
+:  scale = 0.75
+
+cube
+:  x = 3.25
+:  y = 1.125
+:  z = 1.8
+:  texture = crate.bmp
+
+:  scale = 0.75
+
+cube
+:  x = 3.25
+:  y = 1.125
+:  z = 1.05
+:  texture = crate.bmp
+
+:  scale = 0.75
+
+cube
+:  x = 3.25
+:  y = 0.375
+:  z = 0.3
+:  texture = crate.bmp
+
+:  scale = 0.75
+
+cube
+:  x = 3.25
+:  y = 0.375
+:  z = -0.45
+:  texture = crate.bmp
+
+:  scale = 0.75
+
+
+cube
+:  x = 3.25
+:  y = 0.375
+:  z = 1.05
+:  texture = crate.bmp
+
+:  scale = 0.75
+
+cube
+:  x = 3.25
+:  y = 1.125
+:  z = 1.8
+:  texture = crate.bmp
+
+:  scale = 0.75
+
+cube
+
+:  x = 2.5
+:  y = 0.375
+:  z = 1.8
+:  texture = crate.bmp
+
+:  scale = 0.75
+
+cube
+
+:  x = 2.5
+:  y = 0.375
+:  z = 1.05
+:  texture = crate.bmp
+
+:  scale = 0.75
+
+
+cube
+
+:  x = -0.5
+:  y = 0.375
+:  z = -1
+:  ry = 30
+:  texture = crate.bmp
+
+:  scale = 0.75
+
+cube
+
+:  x = -0.5
+:  y = 1.125
+:  z = -1
+:  ry = 60
+:  texture = crate.bmp
+
+:  scale = 0.75
+
+cube
+
+:  x = -3.35
+:  y = 0.375
+:  z = -1
+:  texture = crate.bmp
+
+:  scale = 0.75
+
+cube
+
+:  x = -3.35
+:  y = 0.375
+:  z = -0.25
+:  texture = crate.bmp
+
+:  scale = 0.75
+
+
+[/objects]
+
+[links]
+
+todecepticon-stairwell
+:  world = decepticon-stairwell
+:  linkto = toemo-depository
+
+[/links]
+
+[music]
+tetris.mp3
+[/music]

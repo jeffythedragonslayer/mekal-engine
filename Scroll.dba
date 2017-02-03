@@ -1,0 +1,54 @@
+REM *** Include File: Scroll.dba ***
+REM Created: 8/13/2007 10:07:51 AM
+REM 
+REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\Mekal\Mekal.dbpro
+REM 
+
+type aScroll
+
+  object as dword
+
+  `vector
+  velocity as dword
+  
+endtype
+
+function Scroll_init()
+
+  dim Scroll() as aScroll
+
+endfunction
+
+function Scroll_new(object as dword, uspeed as float, vspeed as float)
+
+  local id as dword
+
+  add to queue Scroll()
+  id = array count(Scroll())
+  
+  Scroll().object = object
+  Scroll().velocity = make_vector2(uspeed, vspeed)
+
+endfunction
+
+function Scroll_update()
+
+  local id
+  
+  for id = 0 to array count(Scroll())
+    scroll object texture Scroll(id).object, x vector2(Scroll(id).velocity), y vector2(Scroll(id).velocity)
+  next id
+
+endfunction
+
+function Scroll_reset()
+
+  local id
+
+  for id = 0 to array count(Scroll())
+    null = delete vector2(Scroll(id).velocity)
+  next id
+
+  empty array Scroll()
+
+endfunction

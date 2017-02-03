@@ -1,0 +1,97 @@
+[general]
+:  ambientlight = 30
+[/general]
+
+[entities]
+Player
+:  y = 1
+Decepticon
+:  x = 2
+:  y = 2
+:  z = 2
+[/entities]
+
+[lights]
+lightbulb
+:  y = 3.1
+:  range = 3.5
+:  type = flash
+
+// flashing light for creepy effect
+
+:  red = 255
+:  green = 255
+:  blue = 128
+
+[/lights]
+
+[objects]
+cell.dbo
+:  textureuv = 2
+
+table.dbo
+:  x = -1.436
+:  z = 2.209
+:  textureuv = 0.5
+
+bed.dbo
+:  x = 1.562
+:  z = -2.074
+:  textureuv = 4
+:  bounce = 1.2
+
+// you can jump on the bed
+
+*
+//pillow
+:  textureuv = 0.5
+:  scale = 0.35
+:  ry = 90
+:  x = 2.314
+:  y = 0.625
+:  z = -2.078
+:  bounce = 0.7
+
+anti-nerdfighter.dbo
+:  x = 2.9
+:  y = 1.7
+:  solid = false
+
+light-blub.dbo
+: y = 3.7
+
+decepticon-door.dbo
+:  x = -3
+:  z = -1.5
+:  uspeed = -0.0025
+:  vspeed = 0.0025
+:  solid = false
+:  diffusered = 0
+:  diffusegreen = 0
+:  ry = 90
+
+:  link = todecepticon-hallway
+
+plane
+
+:  texture = rgb: 0, 0, 0
+:  x = -6.5
+:  z = -1.5
+
+:  rx = 90
+:  sx = 7
+:  sy = 7
+
+[/objects]
+
+[links]
+
+todecepticon-hallway
+:  world = decepticon-hallway
+:  linkto = tocell
+
+[/links]
+
+[music]
+tetris.mp3
+[/music]

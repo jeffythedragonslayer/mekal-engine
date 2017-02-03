@@ -1,0 +1,8 @@
+:  objectname = text:N
+:  texture = rgb: 128, 0, 255
+:  ry = -0.5
+:  health = 100
+:  speed = 0.03
+:  jumpspeed = 0.125
+:  jumpdelay = 600
+:  defense = 3

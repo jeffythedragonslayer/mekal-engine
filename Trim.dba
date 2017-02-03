@@ -1,0 +1,50 @@
+REM *** Include File: Trim.dba ***
+REM Created: 12/16/2007 8:23:51 AM
+REM
+REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\Mekal\Mekal.dbpro
+REM
+
+function trim(str as string)
+
+  str = rtrim(ltrim(str))
+
+endfunction str
+
+function ltrim(str as string)
+
+  local char as dword
+  local length as dword
+
+  length = len(str)
+
+  repeat
+
+    inc char
+    if asc(mid$(str, char)) <> 9 and asc(mid$(str, char)) <> 32
+      str = right$(str, length - char + 1)
+      exit
+    endif
+
+  until char > length
+
+endfunction str
+
+function rtrim(str as string)
+
+  local char as dword
+  local length as dword
+
+  length = len(str)
+  char = length
+
+  repeat
+
+    if asc(mid$(str, char)) <> 9 and asc(mid$(str, char)) <> 32
+      str = left$(str, char)
+      exit
+    endif
+    dec char
+
+  until char = 0
+
+endfunction str

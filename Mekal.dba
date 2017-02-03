@@ -1,0 +1,66 @@
+REM Project: Mekal
+REM Created: 5/20/2007 12:48:23 PM
+REM
+REM ***** Main Source File *****
+REM
+
+`
+`Mekal
+`
+`Copyright (C) 2007 - 2008 Jeff Linahan
+`Complied using DARK BASIC PROFESSIONAL version 6.7
+`
+`Plugins using:
+`
+`eXtends 1.4
+`D3DFunc 3.6.6
+`SC_Collision
+`Matrix1Util
+
+#constant MEKAL_SCALAR = 1.0
+
+#constant MEKAL_VSYNC = 1
+#constant MEKAL_FPS = 60
+#constant MEKAL_AUTODISPLAY = 0
+#constant MEKAL_GAMMA_TIME = 1000.0
+#constant MEKAL_MUSIC = 1
+#constant MEKAL_ANIMATION_SPEED = 50.0
+
+#constant D3D_CONSOLE = 1
+#constant D3D_MAINTITLE = 2
+#constant D3D_SUBTITLE = 3
+#constant D3D_PAUSED = 4
+#constant D3D_3DOBJECT = 5
+#constant D3D_STD = 6
+
+global MEKAL_CAMERA_RANGE_CLOSE as float
+global MEKAL_CAMERA_RANGE_FAR as float
+MEKAL_CAMERA_RANGE_CLOSE = 0.1 * MEKAL_SCALAR
+MEKAL_CAMERA_RANGE_FAR = 110000 * MEKAL_SCALAR
+
+global L3D_HALO_SCALE as float
+L3D_HALO_SCALE = 2.5 * MEKAL_SCALAR
+
+global MEKAL_DECAL_DISTANCE as float
+MEKAL_DECAL_DISTANCE = MEKAL_SCALAR * 0.015
+
+global MEKAL_LINKS_VISIBLE as boolean = 0
+
+global pausekey as boolean
+global lastpausekey as boolean
+
+System_Init()
+
+do
+
+  `check for pausing
+  pausekey = keystate(25)
+  if pausekey && (lastpausekey = 0)
+    System_Pause()
+  endif
+  lastpausekey = pausekey
+
+  `advance game one frame
+  GameLoop(GAMELOOP_GAMEPLAY)
+
+loop

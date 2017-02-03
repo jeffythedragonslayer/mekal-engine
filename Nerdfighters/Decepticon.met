@@ -1,0 +1,10 @@
+:  objectname = text:D
+:  controller = enemy
+:  texture = rgb: 255, 255, 0
+:  ry = -0.5
+:  health = 3
+:  speed = 0.03
+:  jumpspeed = 0.1
+:  jumpdelay = 600
+:  defense = 3
+:  shootdelay = 1000

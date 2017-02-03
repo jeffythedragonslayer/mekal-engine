@@ -1,0 +1,56 @@
+REM *** Include File: HUD.dba ***
+REM Created: 4/3/2008 3:13:45 PM
+REM 
+REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\Mekal\Mekal.dbpro
+REM 
+
+global HUD as HUD
+
+type HUD
+
+  htxtwidth as dword
+  htxtheight as dword
+
+endtype
+
+function HUD_init()
+
+  HUD.htxtwidth = d3d_gettextwidth(D3D_SUBTITLE, "Health:")
+  HUD.htxtheight = d3d_gettextheight(D3D_SUBTITLE, "Health:")
+
+endfunction
+
+function HUD_update()
+
+  local color1 as dword
+  local color2 as dword
+  local health as float
+  local maxhealth as float
+  local healthratio as float
+  
+  `set health variables
+  if Entity.player > -1
+    health = Entity(Entity.player).health
+    maxhealth = EntityTemplate(Entity(Entity.player).template).health
+  endif
+  
+  `percentage of health out of max health
+  healthratio = health / maxhealth
+
+  `calculate colors
+  if healthratio > 0.5
+    color1 = d3d_rgba(510 - 510*healthratio, 255, 0, 32)
+    color2 = d3d_rgba(510 - 510*healthratio, 255, 0, 192)
+  else
+    color1 = d3d_rgba(255, healthratio*510, 0, 32)
+    color2 = d3d_rgba(255, healthratio*510, 0, 192)
+  endif
+  
+  d3d_starttext
+    d3d_text D3D_SUBTITLE, 20, y vector3(screen) - 20 - HUD.htxtheight, 0, "Health", -1
+    d3d_text D3D_SUBTITLE, 20 + HUD.htxtwidth/2, y vector3(screen) - 25, 1, str$(health) + "/" + str$(maxhealth), color2
+  d3d_endtext
+
+  d3d_box HUD.htxtwidth+30, y vector3(screen)-15-HUD.htxtheight, HUD.htxtwidth+30+(healthratio*(x vector3(screen)-HUD.htxtwidth-50)), y vector3(screen)-25, color1, color2, color1, color2
+
+endfunction

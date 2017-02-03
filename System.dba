@@ -1,0 +1,238 @@
+REM *** Include File: System.dba ***
+REM Created: 7/28/2007 10:18:52 PM
+REM
+REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\Mekal\Mekal.dbpro
+REM 
+
+global game as string
+global world as string
+global debug as boolean
+
+`vector
+global screen as dword
+
+function System_Init()
+
+  sync on
+  sync rate 30
+
+  `splash screen here
+  
+  if MEKAL_AUTODISPLAY
+    screen = make_vector3(display width(), display height(), 32)
+    set window off
+  else
+    screen = make_vector3(screen width(), screen height(), 32)
+  endif
+
+  set display mode x vector3(screen), y vector3(screen), z vector3(screen), MEKAL_VSYNC
+  hide mouse
+  color backdrop 0
+  fastsync
+  
+  autocam off
+  randomize timer()
+  
+  d3d_init
+  d3d_color 0, 0, 0, 255
+  d3d_font D3D_CONSOLE, "Calibri", 15, 0, 0, 1
+  d3d_font D3D_MAINTITLE, "Calibri", 30, 0, 0, 1
+  d3d_font D3D_SUBTITLE, "Calibri", 15, 0, 0, 1
+  d3d_font D3D_PAUSED, "Calibri", 60, 0, 0, 1
+  d3d_font D3D_3DOBJECT, "Calibri", 1, 0, 0, 1
+  d3d_font D3D_STD, "Verdana", 10, 0, 0, 1
+
+  set camera range MEKAL_CAMERA_RANGE_CLOSE, MEKAL_CAMERA_RANGE_FAR
+  set normalization on
+  
+  l3d set visibility range 1000 * MEKAL_SCALAR
+  `rts set auto zoom RTS_SCALAR
+  
+  resource search 0
+  
+  `load settings
+  System_MekalExec()
+
+  Console_init()
+  HUD_init()
+  DynamicMusic_init()
+  Camera_init()
+  Tbm_init(MEKAL_FPS)
+  ImgCache_init()
+  World_init()
+  Water_init()
+  Scroll_init()
+  Platform_init()
+  Spinner_init()
+  Trampoline_init()
+  AntiGravityZone_init()
+  Projectile_init()
+  Entity_init()
+  FadeObj_init()
+  Shadow_init()
+  Link_init()
+  SmartSFX_init()
+
+  System_GameParams()
+  
+  System_Startgame()
+
+endfunction
+
+function System_Startgame()
+
+  Entity.playerdied = 0
+  Virtualizer_load(world, "", 1, 1)
+  SmartSFX_play("game start", 0, 0, 0, 0)
+  
+endfunction
+
+`process data in the MekalExec.ini file
+function System_MekalExec()
+
+  local MekalExec as byte
+
+  if file exist("MekalExec.ini") = 0
+    System_Error("Mekal has failed to start because MekalExec.ini does not exist.")
+  endif
+  MekalExec = open_to_read("MekalExec.ini")
+  
+  do
+  
+    Virtualizer_getvar(MekalExec)
+    if Virtualizer.type = VIRTUALIZER_EXIT
+      exit
+    endif
+    
+    `process the different data
+    select Virtualizer.var
+      case "game"
+        game = Virtualizer.value
+        if path exist(game) = 0
+          System_Error("Mekal has failed to start because the folder called " + game + " does not exist.")
+        endif
+        set dir game
+      endcase
+      case "device"
+        `select which input device
+        select Virtualizer.value
+          case "joystick"
+            Inp.mode = deviceJOYSTICK
+          endcase
+          case "keyboard"
+            Inp.mode = deviceKEYBOARD
+          endcase
+          case "mouse"
+            Inp.mode = deviceMOUSE
+          endcase
+        endselect
+      endcase
+      case "keymode"
+        `select which keyboard input mode
+        select Virtualizer.value
+          case "both"
+            Inp.keymode = keymodeBOTH
+          endcase
+          case "arrow"
+            Inp.keymode = keymodeARROW
+          endcase
+          case "wasd"
+            Inp.keymode = keymodeWASD
+          endcase
+        endselect
+      endcase
+      case "linksvisible"
+        MEKAL_LINKS_VISIBLE = (Virtualizer.value = "true")
+      endcase
+      case "debug"
+        debug = (Virtualizer.value = "true")
+      endcase
+    endselect
+
+  loop
+
+  close file MekalExec
+
+endfunction
+
+`process data in the game .ini file
+function System_GameParams()
+
+  local MekalGame as byte
+
+  if file exist(game + ".ini") = 0
+    System_Error("Mekal has failed to start because " + game + "\" + game + ".ini does not exist.")
+  endif
+  MekalGame = open_to_read(game + ".ini")
+
+  do
+
+    Virtualizer_getvar(MekalGame)
+    if Virtualizer.type = VIRTUALIZER_EXIT
+      exit
+    endif
+    
+    `process different data
+    select Virtualizer.var
+      case "world"
+        world = Virtualizer.value
+      endcase
+      case "playername"
+        Entity.playername = Virtualizer.value
+      endcase
+    endselect
+
+  loop
+
+  close file MekalGame
+
+endfunction
+
+function System_Pause()
+    
+    EntityAnime_pause()
+    DynamicMusic_pause(1)
+    Rts_pause(1)
+    
+    repeat
+    
+      lastpausekey = pausekey
+      pausekey = keystate(25)
+      
+      Console_update()
+    
+      d3d_starttext
+        d3d_boxtext D3D_PAUSED, 0, 0, x vector3(screen), y vector3(screen), 1, 1, "Paused", -1
+      d3d_endtext
+
+      if escapekey()
+        end
+      endif
+      
+      fastsync
+    
+    until pausekey && (lastpausekey = 0)
+
+    Rts_pause(0)
+    DynamicMusic_pause(0)
+    
+    Tbm_cut()
+
+endfunction
+
+function System_Gameover()
+
+  System_Startgame()
+
+endfunction
+
+function System_Error(message as string)
+
+  set gamma 255, 255, 255
+  hide window
+  
+  show mouse
+  exit prompt "An error has occurred.  " + message, "Mekal"
+  end
+
+endfunction

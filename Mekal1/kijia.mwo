@@ -1,0 +1,158 @@
+[titles]
+:  title=Planet Kipe
+:  subtitle=(Kijia Field)
+[/titles]
+[objects]
+kijia.x
+BowlPin2.x
+:  x=-5
+:  z=3
+:  scale=10
+*
+:  x=-8
+:  z=-5
+:  scale=10
+Crate_Cube01.x
+:  x=-2
+:  y=0.82
+:  z=11
+:  z2=11
+:  y2=0.82
+:  x2=2
+:  wait1=2000
+:  wait2=2000
+:  speed=0.01
+:  scale=0.1
+plant.x
+:  x=-5
+:  z=2
+:  scale=0.5
+:  solid=false
+:  culling=false
+*
+:  x=5
+:  z=3
+:  scale=0.5
+:  solid=false
+:  culling=false
+[/objects]
+[lights]
+Star
+:  y=1
+:  halo=halo01.jpg
+:  red=0
+:  green=0
+:  blue=255
+Star2
+:  x=2
+:  z=-3
+:  y=1
+:  halo=halo03.jpg
+:  red=0
+:  green=255
+:  blue=255
+[/lights]
+[entities]
+Player
+:  y=1
+German
+:  x=0
+:  y=2
+:  z=0
+German
+:  x=2
+:  y=2
+:  z=0
+German
+:  x=2
+:  y=2
+:  z=2
+German
+:  x=-2
+:  y=2
+:  z=0
+German
+:  x=-2
+:  y=2
+:  z=-2
+German
+:  x=2
+:  y=2
+:  z=2
+German
+:  x=4
+:  y=2
+:  z=0
+German
+:  x=0
+:  y=2
+:  z=4
+German
+:  x=0
+:  y=2
+:  z=-4
+German
+:  x=-4
+:  y=2
+:  z=-4
+German
+:  x=1
+:  y=2
+:  z=-4
+German
+:  x=1
+:  y=2
+:  z=8
+German
+:  x=8
+:  y=2
+:  z=-7
+[/entities]
+[links]
+toFountain
+:  world=Fountain
+:  linkto=toKijia
+:  x=0
+:  y=.5
+:  z=16
+:  rx=0
+:  ry=180
+:  rz=0
+:  width=2
+:  height=2
+toOutsideMekalTemple
+:  world=OutsideMekalTemple
+:  linkto=toKijia
+:  x=0
+:  y=.5
+:  z=-16
+:  rx=0
+:  ry=0
+:  rz=0
+:  width=2
+:  height=2
+[/links]
+[intellizones]
+boxcam
+:  x=1
+:  y=6
+:  z=17
+:  radius=10
+:  extrapolation=0.5
+[/intellizones]
+[antigravityzones]
+main
+:  x1=-1
+:  y1=0
+:  z1=-1
+:  x2=1
+:  y2=5
+:  z2=1
+[/antigravityzones]
+[sky]
+MassiveMountain
+[/sky]
+[music]
+Gusty Garden Galaxy.mp3
+:  radius=0
+[/music]

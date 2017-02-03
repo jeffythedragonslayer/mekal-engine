@@ -1,0 +1,16 @@
+:  objectname=Ninja.dbo
+:  scale=0.5
+:  ry=180
+:  yoffset=0.96258109808
+:  health=100
+:  speed=0.04
+:  jumpspeed=0.15
+:  jumpdelay=500
+:  defense=4
+:  AnimeIdle=25
+:  AnimeFidget=75
+:  AnimeFidgetDelay=10000
+:  AnimeMove=100
+:  AnimeAttack=125
+:  AnimeImpact=135
+:  AnimeDie=185

@@ -1,0 +1,49 @@
+REM *** Include File: Trampoline.dba ***
+REM Created: 8/16/2007 7:30:58 AM
+REM
+REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\Mekal\Mekal.dbpro
+REM 
+
+type aTrampoline
+
+  object as dword
+  bounce as float
+  
+endtype
+
+function Trampoline_init()
+
+  dim Trampoline() as aTrampoline
+
+endfunction
+
+function Trampoline_new(object as dword, bounce as float)
+
+  local id as dword
+  
+  add to queue Trampoline()
+  id = array count(Trampoline())
+  
+  Trampoline().object = object
+  Trampoline().bounce = bounce
+  
+endfunction
+
+`returns id if the object is a trampoline
+function Trampoline_istrampoline(object as dword)
+
+  local id
+
+  for id = 0 to array count(Trampoline())
+    if Trampoline(id).object = object
+      exitfunction id
+    endif
+  next id
+
+endfunction -1
+
+function Trampoline_reset()
+
+  empty array Trampoline()
+  
+endfunction

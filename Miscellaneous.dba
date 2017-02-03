@@ -1,0 +1,90 @@
+REM *** Include File: Miscellaneous.dba ***
+REM Created: 7/28/2007 10:32:01 PM
+REM
+REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\Mekal\Mekal.dbpro
+REM
+
+function free_obj()
+
+  local id as dword
+
+  id = b3d make object plain(1, 1)
+  delete object id
+
+endfunction id
+
+function open_to_read(filename as string)
+
+  local id as dword
+
+  id = find free file()
+  open to read id, filename
+
+endfunction id
+
+`soft sgn has a tolerance parameter
+`so inside it is 0
+function softsgn(num as float, tolerance as float)
+
+  if abs(num) <= tolerance
+    exitfunction 0.0
+  endif
+  num = sgn(num)
+
+endfunction num
+
+`extends doesn't have this function
+function snd_clone_sound(sound as dword)
+
+  local id as dword
+  local memblock as dword
+
+  `make a dummy sound then delete it
+  `and use the id number
+  memblock = mbc make memblock(28)
+  write memblock dword memblock, 0, 1
+  write memblock dword memblock, 4, 1
+  write memblock dword memblock, 8, 22050
+  write memblock dword memblock, 12, 44100
+  write memblock dword memblock, 16, 2
+  write memblock dword memblock, 20, 16
+  write memblock dword memblock, 24, 0
+
+  id = snd make sound from memblock(memblock)
+  delete memblock memblock
+  delete sound id
+
+  clone sound id, sound
+
+endfunction id
+
+function anglediff(a1 as float, a2 as float)
+
+  a1 = abs(wrapvalue(a1+180-a2)-180)
+
+endfunction a1
+
+function makeRGBimage(color as dword)
+
+  local memblock as dword
+  local image as dword
+
+  memblock = mbc make memblock(16)
+  write memblock dword memblock, 0, 1
+  write memblock dword memblock, 4, 1
+  write memblock dword memblock, 8, 32
+  write memblock dword memblock, 12, color
+  write memblock byte memblock, 15, 255
+  image = img make image from memblock(memblock)
+  delete memblock memblock
+
+endfunction image
+
+function make3Dtext(str as string)
+
+  local id as dword
+  
+  id = free_obj()
+  d3d_make_3dtext id, D3D_3DOBJECT, str, 0.25, 2, 1
+
+endfunction id

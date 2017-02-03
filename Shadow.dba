@@ -1,0 +1,127 @@
+REM *** Include File: Shadow.dba ***
+REM Created: 12/20/2007 12:33:10 PM
+REM 
+REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\Mekal\Mekal.dbpro
+REM 
+
+global Shadow as Shadow
+
+type Shadow
+
+  texture as dword
+  normal as dword
+
+endtype
+
+type aShadow
+
+  object as dword
+  castobject as dword
+  
+  yoffset as float
+  position as dword
+
+endtype
+
+function Shadow_init()
+
+  set dir "..\Common"
+  Shadow.texture = img load image("shadow.png")
+  set dir "..\" + game
+  
+  global SHADOW_MAX_CAST_HEIGHT as float
+  SHADOW_MAX_CAST_HEIGHT = MEKAL_SCALAR * 50
+  
+  global SHADOW_MAX_DECAL_HEIGHT as float
+  SHADOW_MAX_DECAL_HEIGHT = MEKAL_SCALAR * 0.01
+  
+  dim Shadow() as aShadow
+  
+  Shadow.normal = make_vector3(0, 0, 0)
+
+endfunction
+
+function Shadow_new(castobject as dword, yoffset as float)
+
+  local id as dword
+  local size as float
+  
+  add to queue Shadow()
+  id = array count(Shadow())
+  
+  size = (object size x(castobject, 1) + object size z(castobject, 1)) / 2.0
+  Shadow().object = b3d make object plain(size, size)
+  xrotate object Shadow().object, 90
+  
+  texture object Shadow().object, Shadow.texture
+  set object transparency Shadow().object, 2
+  
+  Shadow().position = make_vector3(0, 0, 0)
+  Shadow().castobject = castobject
+  Shadow().yoffset = yoffset
+  
+endfunction id
+
+function Shadow_update()
+
+  local id
+  local object as dword
+
+  for id = 0 to array count(Shadow())
+  
+    object = Shadow(id).object
+  
+    if object exist(Shadow(id).castobject)
+
+      set_vector3_to_object_position(Shadow(id).position, Shadow(id).castobject)
+
+      `cast a ray vertically down
+      `if it hits the world then the shadow is positioned there
+      if sc_raycastgroup(SC_WORLD, x vector3(Shadow(id).position), y vector3(Shadow(id).position) + Shadow(id).yoffset, z vector3(Shadow(id).position), x vector3(Shadow(id).position), y vector3(Shadow(id).position) - SHADOW_MAX_CAST_HEIGHT, z vector3(Shadow(id).position), Shadow(id).castobject)
+      
+        exclude object off object
+
+        set_vector3_y(Shadow(id).position, sc_getstaticcollisiony() + SHADOW_MAX_DECAL_HEIGHT, 0)
+        position_object_to_vector3(object, Shadow(id).position, 0)
+        set vector3 Shadow.normal, sc_getcollisionnormalx(), sc_getcollisionnormaly(), sc_getcollisionnormalz()
+        add vector3 Shadow.normal, Shadow.normal, Shadow(id).position
+        point_object_to_vector3(object, Shadow.normal)
+
+      else
+
+        exclude object on object
+
+      endif
+      
+    else
+      `if casting object no longer exists neither does the shadow
+      
+      Shadow_delete(id)
+      dec id
+      
+    endif
+    
+  next id
+
+endfunction
+
+function Shadow_delete(id as dword)
+
+  null = delete vector3(Shadow(id).position)
+  delete object Shadow(id).object
+  
+  array delete element Shadow(), id
+
+endfunction
+
+function Shadow_find(castobject as dword)
+
+  local id
+
+  for id = 0 to array count(Shadow())
+    if Shadow(id).castobject = castobject
+      exitfunction id
+    endif
+  next id
+
+endfunction -1

@@ -1,0 +1,373 @@
+REM *** Include File: EntityTemplate.dba ***
+REM Created: 7/14/2007 7:04:08 AM
+REM
+REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\Mekal\Mekal.dbpro
+REM
+
+`Note 2:32 PM 10/11/2008: I make this module before I
+`understood that in OO programming sometimes inherited
+`classes should actually be defined in the code
+`This was complete overkill but it works
+
+type EntityTemplate
+
+  name as string
+  controller as byte
+
+  objectname as string
+  object as dword
+  texturename as string
+  texture as dword
+  ry as float
+  yoffset as float
+  scale as float
+  radius as float
+  height as float
+  size as float
+  extracast as float
+
+  health as float
+
+  slope as float
+
+  speed as float
+  waterspeed as float
+
+  jumpspeed as float
+  swimspeed as float
+  jumpdelay as float
+
+  terminalvelocity as float
+  waterterminalvelocity as float
+
+  shootdelay as dword
+  bulletattack as dword
+  bulletspeed as float
+  bulletlife as dword
+  friendlyfire as boolean
+  defense as float
+
+  fidgetdelay as dword
+
+endtype
+
+function EntityTemplate_init()
+
+  dim EntityTemplate() as EntityTemplate
+
+endfunction
+
+`creates an entity template
+function EntityTemplate_new(name as string, controller as byte, objectname as string, texturename as string, ry as float, yoffset as float, scale as float, health as float, slope as float, speed as float, waterspeed as float, jumpspeed as float, swimspeed as float, jumpdelay as float, terminalvelocity as float, waterterminalvelocity as float, shootdelay as dword, bulletattack as dword, bulletspeed as float, bulletlife as dword, friendlyfire as boolean, defense as float, fidgetdelay as dword)
+
+  local id as dword
+  local object as dword
+  local texture as dword
+
+  add to queue EntityTemplate()
+  id = array count(EntityTemplate())
+
+  EntityTemplate().name = name
+  EntityTemplate().controller = controller
+  EntityTemplate().objectname = objectname
+  EntityTemplate().texturename = texturename
+  EntityTemplate().ry = ry
+  EntityTemplate().yoffset = yoffset
+  EntityTemplate().scale = scale
+  if health <= 0
+    System_Error("Entity " + name + " has an illegal max health value.")
+  endif
+  EntityTemplate().health = health
+  EntityTemplate().slope = slope
+  EntityTemplate().speed = speed
+  EntityTemplate().waterspeed = waterspeed
+  EntityTemplate().jumpspeed = jumpspeed
+  EntityTemplate().swimspeed = swimspeed
+  EntityTemplate().jumpdelay = jumpdelay
+  EntityTemplate().terminalvelocity = terminalvelocity
+  EntityTemplate().waterterminalvelocity = waterterminalvelocity
+  EntityTemplate().shootdelay = shootdelay
+  EntityTemplate().bulletattack = bulletattack
+  EntityTemplate().bulletspeed = bulletspeed
+  EntityTemplate().bulletlife = bulletlife
+  EntityTemplate().friendlyfire = friendlyfire
+  EntityTemplate().defense = defense
+  EntityTemplate().fidgetdelay = fidgetdelay
+
+  `create master object
+  if fast right$(objectname, 2) = ".x" || fast right$(objectname, 4) = ".dbo"
+    `object is a model
+    object = b3d load object(objectname)
+    scale object object, EntityTemplate().scale*100, EntityTemplate().scale*100, EntityTemplate().scale*100
+  else
+    `object is a primitive
+
+    if fast left$(objectname, 5) = "text:"
+      `object is text
+      object = make3Dtext(fast right$(objectname, fast len(objectname)-5))
+      scale object object, EntityTemplate().scale * 100.0, EntityTemplate().scale * 100.0, EntityTemplate().scale * 100.0
+    else
+      `object is shape
+      select objectname
+        case "sphere"
+          object = b3d make object sphere(EntityTemplate().scale)
+        endcase
+        case "cube"
+          object = b3d make object cube(EntityTemplate().scale)
+        endcase
+        case default
+          System_Error("Could not create " + objectname + " object.")
+        endcase
+      endselect
+    endif
+
+  endif
+  
+  `get texture
+  if fast len(texturename)
+    texture object object, ImgCache_fetch(texturename)
+  endif
+
+  yrotate object object, EntityTemplate().ry
+  fix object pivot object
+  exclude object on object
+
+  EntityTemplate().radius = (object size x(object, 1) + object size z(object, 1)) / 4.0
+  EntityTemplate().height = object size y(object, 1)
+  EntityTemplate().size = object size(object, 1)
+  EntityTemplate().extracast = (EntityTemplate().height/2.0) - EntityTemplate().radius
+  EntityTemplate().object = object
+
+endfunction id
+
+function EntityTemplate_find(name as string)
+
+  local id
+
+  for id = 0 to array count(EntityTemplate())
+    if EntityTemplate(id).name = name
+      exitfunction id
+    endif
+  next id
+
+endfunction -1
+
+function EntityTemplate_reset(preserveplayer as boolean)
+
+  local id
+  local playertemplate = -1
+  
+  local controller as byte
+  local objectname as string
+  local texturename as string
+  local ry as float
+  local yoffset as float
+  local scale as float
+  local health as float
+  local slope as float
+  local speed as float
+  local waterspeed as float
+  local jumpspeed as float
+  local swimspeed as float
+  local jumpdelay as float
+  local terminalvelocity as float
+  local waterterminalvelocity as float
+  local shootdelay as dword
+  local bulletattack as dword
+  local bulletspeed as float
+  local bulletlife as dword
+  local friendlyfire as boolean
+  local defense as float
+  local fidgetdelay as dword
+
+  if preserveplayer && (array count(EntityTemplate()) > -1)
+
+    playertemplate = EntityTemplate_find(Entity.playername)
+    controller = EntityTemplate(playertemplate).controller
+    objectname = EntityTemplate(playertemplate).objectname
+    texturename = EntityTemplate(playertemplate).texturename
+    ry = EntityTemplate(playertemplate).ry
+    yoffset = EntityTemplate(playertemplate).yoffset
+    scale = EntityTemplate(playertemplate).scale
+    health = EntityTemplate(playertemplate).health
+    slope = EntityTemplate(playertemplate).slope
+    speed = EntityTemplate(playertemplate).speed
+    waterspeed = EntityTemplate().waterspeed
+    jumpspeed = EntityTemplate(playertemplate).jumpspeed
+    swimspeed = EntityTemplate(playertemplate).swimspeed
+    jumpdelay = EntityTemplate(playertemplate).jumpdelay
+    terminalvelocity = EntityTemplate(playertemplate).terminalvelocity
+    waterterminalvelocity = EntityTemplate(playertemplate).waterterminalvelocity
+    shootdelay = EntityTemplate(playertemplate).shootdelay
+    bulletattack = EntityTemplate(playertemplate).bulletattack
+    bulletspeed = EntityTemplate(playertemplate).bulletspeed
+    bulletlife = EntityTemplate(playertemplate).bulletlife
+    friendlyfire = EntityTemplate(playertemplate).friendlyfire
+    defense = EntityTemplate(playertemplate).defense
+    fidgetdelay = EntityTemplate(playertemplate).fidgetdelay
+
+  endif
+
+  for id = 0 to array count(EntityTemplate())
+    delete object EntityTemplate(id).object
+  next id
+  
+  empty array EntityTemplate()
+
+  if preserveplayer
+    EntityTemplate_new(Entity.playername, controller, objectname, texturename, ry, yoffset, scale, health, slope, speed, waterspeed, jumpspeed, swimspeed, jumpdelay, terminalvelocity, waterterminalvelocity, shootdelay, bulletattack, bulletspeed, bulletlife, friendlyfire, defense, fidgetdelay)
+  endif
+
+endfunction
+
+function Virtualizer_LoadEntityTemplate(entitytemplatename as string)
+
+  local templatefile as dword
+  local id as dword
+  local controller as byte = ENTITY_CONTROLLER_NONE
+  local objectname as string = "sphere"
+  local texturename as string
+  local ry as float
+  local yoffset as float
+  local scale as float = MEKAL_SCALAR
+  local health as float = 10.0
+  local slope as float = 0.6
+  local speed as float
+  speed = 0.05 * MEKAL_SCALAR
+  local waterspeed as float
+  waterspeed = 0.015 * MEKAL_SCALAR
+  local jumpspeed as float
+  jumpspeed = 0.1 * MEKAL_SCALAR
+  local swimspeed as float
+  swimspeed = 1.05 * ENTITY_GRAVITY
+  local jumpdelay as dword = 300
+  local terminalvelocity as float
+  terminalvelocity = 0.80 * MEKAL_SCALAR
+  local waterterminalvelocity as float
+  waterterminalvelocity = 0.03 * MEKAL_SCALAR
+  local shootdelay as dword = 500
+  local bulletattack as dword = 5
+  local bulletspeed as float
+  bulletspeed = 0.1 * MEKAL_SCALAR
+  local bulletlife as dword = 5000
+  local friendlyfire as boolean = 0
+  local defense as float = 2.0
+  local animeframe as dword
+  local fidgetdelay as dword
+
+  if file exist(entitytemplatename + ".met") = 0
+    System_Error("The mekal entity template file " + entitytemplatename + ".mwo does not exit.")
+  endif
+  templatefile = open_to_read(entitytemplatename + ".met")
+
+  do
+
+    Virtualizer_getvar(templatefile)
+    if Virtualizer.type = VIRTUALIZER_EXIT
+      exit
+    endif
+
+    select Virtualizer.var
+      case "controller"
+        select Virtualizer.value
+          case "player"
+            controller = ENTITY_CONTROLLER_PLAYER
+          endcase
+          case "enemy"
+            controller = ENTITY_CONTROLLER_ENEMY
+          endcase
+          case "npc"
+            controller = ENTITY_CONTROLLER_NPC
+          endcase
+          case default
+            controller = ENTITY_CONTROLLER_NONE
+          endcase
+        endselect
+      endcase
+      case "objectname"
+        objectname = Virtualizer.value
+      endcase
+      case "texture"
+        texturename = Virtualizer.value
+        endcase
+      case "ry"
+        ry = val(Virtualizer.value)
+        endcase
+      case "yoffset"
+        yoffset = val(Virtualizer.value)
+        endcase
+      case "scale"
+        scale = val(Virtualizer.value) * MEKAL_SCALAR
+        endcase
+      case "health"
+        health = val(Virtualizer.value)
+        endcase
+      case "slope"
+        slope = val(Virtualizer.value)
+      endcase
+      case "speed"
+        speed = val(Virtualizer.value) * MEKAL_SCALAR
+      endcase
+      case "jumpspeed"
+        jumpspeed = val(Virtualizer.value) * MEKAL_SCALAR
+      endcase
+      case "swimspeed"
+        swimspeed = val(Virtualizer.value) * ENTITY_GRAVITY
+      endcase
+      case "jumpdelay"
+        jumpdelay = val(Virtualizer.value)
+      endcase
+      case "terminalvelocity"
+        terminalvelocity = val(Virtualizer.value) * MEKAL_SCALAR
+      endcase
+      case "waterterminalvelocity"
+        waterterminalvelocity = val(Virtualizer.value) * MEKAL_SCALAR
+      endcase
+      case "shootdelay"
+        shootdelay = val(Virtualizer.value)
+      endcase
+      case "bulletattack"
+        bulletattack = val(Virtualizer.value)
+      endcase
+      case "bulletspeed"
+        bulletspeed = val(Virtualizer.value) * MEKAL_SCALAR
+      endcase
+      case "bulletlife"
+        bulletlife = val(Virtualizer.value)
+      endcase
+      case "defense"
+        defense = val(Virtualizer.value)
+      endcase
+      case "friendlyfire"
+        select Virtualizer.value
+          case "true"
+            friendlyfire = 1
+          endcase
+          case "false"
+            friendlyfire = 0
+          endcase
+        endselect
+      endcase
+      case default
+        if fast left$(Virtualizer.var, 5) = "Anime"
+          `add an animation
+      
+          if fast right$(Virtualizer.var, 11) = "FidgetDelay"
+            fidgetdelay = val(Virtualizer.value)
+          else
+            EntityAnime_new(entitytemplatename, mid$(Virtualizer.var, 6, 0), animeframe, val(Virtualizer.value))
+            animeframe = EntityAnime().endframe + 1
+          endif
+        endif
+      endcase
+    endselect
+
+  loop
+
+  close file templatefile
+
+  yoffset = yoffset * scale
+
+  id = EntityTemplate_new(entitytemplatename, controller, objectname, texturename, ry, yoffset, scale, health, slope, speed, waterspeed, jumpspeed, swimspeed, jumpdelay, terminalvelocity, waterterminalvelocity, shootdelay, bulletattack, bulletspeed, bulletlife, friendlyfire, defense, fidgetdelay)
+
+endfunction id

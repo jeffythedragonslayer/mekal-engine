@@ -1,0 +1,583 @@
+REM *** Include File: Virtualizer.dba ***
+REM Created: 5/20/2007 1:05:49 PM
+REM
+REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\Mekal\Mekal.dbpro
+REM
+
+`Note 2:35 PM 10/11/2008: The name of this module is a throwback to Code Lyoko
+`where people are "virtualized" into a kind of "Matrix"
+
+#constant VIRTUALIZER_LINK_DISTANCE = 2.0
+
+global Virtualizer as Virtualizer
+
+type Virtualizer
+
+  Virtualized as boolean
+
+  file as dword
+  filename as string
+
+  type
+  #constant VIRTUALIZER_EXIT = 0
+  #constant VIRTUALIZER_VARIABLE = 1
+  #constant VIRTUALIZER_NEW = 2
+
+  tag as string
+  name as string
+  var as string
+  value as string
+
+  titlestart as dword
+
+  dropin as boolean
+
+endtype
+
+function Virtualizer_load(filename as string, linkto as string, titles as boolean, startgame as boolean)
+
+  local id as dword
+  local enterspeed as float
+  local enterangle as float
+
+  Virtualizer_unload()
+  
+  `copyright info
+  if startgame
+    Console_reset()
+    Console_send("Mekal", 255)
+    Console_send("Copyright (C) 2007 - 2008 Jeff Linahan", 255)
+  endif
+  
+  `default ambient light level
+  set ambient light 25
+
+  Virtualizer.filename = filename + ".mwo"
+  if file exist(Virtualizer.filename) = 0
+    System_Error("Mekal world file " + Virtualizer.filename + " does not exist.")
+  endif
+  Virtualizer.file = open_to_read(Virtualizer.filename)
+
+  while file end(Virtualizer.file) = 0
+    read string Virtualizer.file, Virtualizer.tag
+    Virtualizer.tag = fast lower$(trim$(Virtualizer.tag))
+    if fast len(Virtualizer.tag) > 2
+      Virtualizer.tag = mid$(Virtualizer.tag, 2, fast len(Virtualizer.tag) - 2)
+      select Virtualizer.tag
+        case "titles"
+          if titles
+            Virtualizer_Titles()
+          endif
+        endcase
+        case "general"
+          Virtualizer_General()
+        endcase
+        case "objects"
+          Virtualizer_Objects()
+        endcase
+        case "water"
+          Virtualizer_Water()
+        endcase
+        case "lights"
+          Virtualizer_Lights()
+        endcase
+        case "particles"
+          Virtualizer_Particles()
+        endcase
+        case "entities"
+          Virtualizer_Entities()
+        endcase
+        case "links"
+          Virtualizer_Links()
+        endcase
+        case "intellizones"
+          Virtualizer_Intellizones()
+        endcase
+        case "antigravityzones"
+          Virtualizer_AntiGravityZones()
+        endcase
+        case "sky"
+          Virtualizer_Sky()
+        endcase
+        case "music"
+          Virtualizer_DynamicMusic()
+        endcase
+      endselect
+    endif
+  endwhile
+
+  close file Virtualizer.file
+
+  position mouse x vector3(screen) / 2, y vector3(screen) / 2
+
+  `position player at link
+  Virtualizer.dropin = 1
+  if linkto <> ""
+    if Entity.player > -1
+
+      id = Link_find(linkto)
+      if id = -1
+        Console_send("Link " + linkto + " was not found in the mekal world file.", rgb(255, 0, 0))
+      else
+        position object Entity(Entity.player).object, object position x(Link(id).object), object position y(Link(id).object), object position z(Link(id).object)
+        Entity.playerangle = object angle y(Link(id).object)
+        Entity(Entity.player).oldangle = Entity.playerangle
+        yrotate object Entity(Entity.player).object, Entity.playerangle
+        move object Entity(Entity.player).object, EntityTemplate(Entity(Entity.player).template).radius * VIRTUALIZER_LINK_DISTANCE
+        set_vector3_to_object_position(Entity(Entity.player).position, Entity(Entity.player).object)
+        Virtualizer.dropin = 0
+      endif
+    endif
+  endif
+
+  `clear up unused archived images
+  ImgCache_clean()
+
+  `wait so player can read titles
+  while timer() < Virtualizer.titlestart
+  endwhile
+
+  `fade in
+  d3d_box 0, 0, x vector3(screen), y vector3(screen)
+  fastsync
+  Gamma_set(255)
+
+  Entity.playerangle = Entity(Entity.player).oldangle
+  Camera.tpangle = Entity.playerangle
+  Camera_update(0)
+  Camera_update(0)
+  
+  `set water to correct position
+  Water_update()
+
+  `now that the camera and waters are positioned, music can be started
+  DynamicMusic_startloop()
+
+  Tbm_cut()
+
+  while Gamma.gamma < 255
+    GameLoop(GAMELOOP_FADEIN)
+  endwhile
+
+  Virtualizer.Virtualized = 1
+  Console_send(fast lower$(filename) + " was loaded successfully", rgb(0, 255, 0))
+
+endfunction
+
+function Virtualizer_unload()
+
+  if Virtualizer.Virtualized
+
+    Gamma_set(0)
+
+    `fade out
+    DynamicMusic_blend(-1, MEKAL_GAMMA_TIME)
+    Inp.push1 = 0
+    Inp.push2 = 0
+    while Gamma.gamma
+      GameLoop(GAMELOOP_FADEOUT)
+    endwhile
+
+    Camera_reset()
+    ImgCache_archive()
+    World_reset()
+    Platform_reset()
+    Spinner_reset()
+    Water_reset()
+    Scroll_reset()
+    Trampoline_reset()
+    AntiGravityZone_reset()
+    b3d clear billboard list
+    l3d clear virtual lights
+    p3d clear particles
+    Projectile_reset()
+    Entity_reset(1)
+    FadeObj_reset()
+    Shadow_update()
+    Link_reset()
+    DynamicMusic_reset()
+    SmartSFX_reset()
+
+  endif
+
+endfunction
+
+function Virtualizer_getvar(calledfile as dword)
+
+  local str as string
+  local file as dword
+  local pos as dword
+
+  if calledfile
+    file = calledfile
+  else
+    file = Virtualizer.file
+  endif
+  
+  while ((fast len(str) = 0) || (fast left$(str, 2) = "//")) && (file end(file) = 0)
+
+    read string file, str
+    str = trim$(str)
+
+  endwhile
+
+  if calledfile = 0
+    if str = "[/" + Virtualizer.tag + "]"
+      Virtualizer.type = VIRTUALIZER_EXIT
+      exitfunction
+    else
+      `check for unclosed data tags
+      if fast left$(str, 1) = "[" or file end(file)
+        System_Error("Could not close " + Virtualizer.tag + " tag in " + Virtualizer.filename + " mekal world file.")
+      endif
+    endif
+  endif
+
+  if fast left$(str, 1) = ":"
+    str = trimleft$(mid$(str, 2, 0))
+    pos = find char(str, "=")
+    
+    `error if = not found
+    if pos = 0
+      if calledfile
+        System_Error("No value set for " + str + " variable in mekal data file.")
+      else
+        System_Error("No value set for " + str + " variable in " + Virtualizer.filename + " mekal world file under " + Virtualizer.tag + " tag.")
+      endif
+    endif
+
+    Virtualizer.var = trimright$(fast left$(str, pos-1))
+    Virtualizer.value = trimleft$(mid$(str, pos+1, 0))
+    Virtualizer.type = VIRTUALIZER_VARIABLE
+  else
+    if file end(file)
+      Virtualizer.type = VIRTUALIZER_EXIT
+    else
+      Virtualizer.name = str
+      Virtualizer.type = VIRTUALIZER_NEW
+    endif
+  endif
+
+endfunction
+
+function Virtualizer_General()
+
+  do
+
+    Virtualizer_getvar(0)
+    
+    if Virtualizer.type = VIRTUALIZER_VARIABLE
+      `set general variables
+      select Virtualizer.var
+        case "diey"
+          Entity.diey = val(Virtualizer.value) * MEKAL_SCALAR
+        endcase
+        case "ambientlight"
+          set ambient light val(Virtualizer.value)
+        endcase
+      endselect
+    else
+      if Virtualizer.type = VIRTUALIZER_EXIT
+        exit
+      endif
+    endif
+
+  loop
+
+endfunction
+
+function Virtualizer_Titles()
+
+  local title as string
+  local titlered as byte = 255
+  local titlegreen as byte = 255
+  local titleblue as byte = 255
+
+  local subtitle as string
+  local subtitlered as byte = 255
+  local subtitlegreen as byte = 255
+  local subtitleblue as byte = 255
+
+  Virtualizer.titlestart = 0
+
+  do
+
+    Virtualizer_getvar(0)
+
+    if Virtualizer.type = VIRTUALIZER_VARIABLE
+      `set titles
+      select Virtualizer.var
+        case "title"
+          title = Virtualizer.value
+        endcase
+        case "titlered"
+          titlered = val(Virtualizer.value)
+        endcase
+        case "titlegreen"
+          titlegreen = val(Virtualizer.value)
+        endcase
+        case "titleblue"
+          titleblue = val(Virtualizer.value)
+        endcase
+        case "subtitle"
+          subtitle = Virtualizer.value
+        endcase
+        case "subtitlered"
+          subtitlered = val(Virtualizer.value)
+        endcase
+        case "subtitlegreen"
+          subtitlegreen = val(Virtualizer.value)
+        endcase
+        case "subtitleblue"
+          subtitleblue = val(Virtualizer.value)
+        endcase
+        case "delay"
+          Virtualizer.titlestart = timer() + val(Virtualizer.value)
+        endcase
+      endselect
+    else
+      if Virtualizer.type = VIRTUALIZER_EXIT
+        exit
+      endif
+    endif
+
+  loop
+
+  `display titles
+  if title <> "" or subtitle <> ""
+
+    d3d_box 0, 0, x vector3(screen), y vector3(screen)
+
+    d3d_starttext
+      d3d_text D3D_MAINTITLE, x vector3(screen)/2.0, y vector3(screen)/2.0, 1, title, rgb(titlered, titlegreen, titleblue)
+      d3d_text D3D_SUBTITLE, x vector3(screen)/2.0, y vector3(screen) * (4.0/7.0), 1, subtitle, rgb(subtitlered, subtitlegreen, subtitleblue)
+    d3d_endtext
+
+    fastsync
+    set gamma 255, 255, 255
+
+    if Virtualizer.titlestart = 0
+      Virtualizer.titlestart = timer() + 1500
+    endif
+
+  endif
+
+endfunction
+
+function Virtualizer_Lights()
+
+  local lightname as string
+  local light as dword
+  local id as dword
+  local object as dword
+
+  do
+
+    Virtualizer_getvar(0)
+
+    if Virtualizer.type = VIRTUALIZER_VARIABLE
+      `set light variables
+      select Virtualizer.var
+        case "x"
+          x = val(Virtualizer.value) * MEKAL_SCALAR
+        endcase
+        case "y"
+          y = val(Virtualizer.value) * MEKAL_SCALAR
+        endcase
+        case "z"
+          z = val(Virtualizer.value) * MEKAL_SCALAR
+        endcase
+        case "range"
+          range = val(Virtualizer.value) * MEKAL_SCALAR
+        endcase
+        case "red"
+          red = val(Virtualizer.value)
+        endcase
+        case "green"
+          green = val(Virtualizer.value)
+        endcase
+        case "blue"
+          blue = val(Virtualizer.value)
+        endcase
+        case "halo"
+          halo = Virtualizer.value
+        endcase
+        case "type"
+          lighttype = Virtualizer.value
+        endcase
+        case "locked"
+          locked = val(Virtualizer.value)
+        endcase
+      endselect
+    else
+      `either this is the start of a new light, or the end of the entire tag
+      `either way, if there's a light in memory we want to create it
+
+      if lightname
+
+        `make light
+        light = l3d add virtual light(x, y, z, range, red, green, blue, 0)
+
+        `make light halo
+        if halo
+          l3d set virtual light halo light, ImgCache_fetch(halo)
+        endif
+
+        `lock light if supposed to
+        if locked
+          l3d lock light light
+        endif
+
+        `configure light
+        select lighttype
+          case "flame"
+            l3d set virtual flame light light
+          endcase
+          case "pulse"
+            l3d set virtual pulse light light
+          endcase
+          case "flash"
+            l3d set virtual flash light light
+          endcase
+        endselect
+
+      endif
+
+      if Virtualizer.type = VIRTUALIZER_EXIT
+        exit
+      endif
+
+      `new light, reset variables
+      local x as float
+      local y as float
+      local z as float
+      local range as float
+      range = 20.0 * MEKAL_SCALAR
+      local red = 128
+      local green = 128
+      local blue = 128
+      local halo as string
+      local lighttype as string
+      local locked as boolean
+
+      lightname = Virtualizer.name
+
+    endif
+
+  loop
+
+  `scale halos
+  object = free_obj() + 1
+  null = l3d display lights()
+
+  for id = object to object + 6
+    if object exist(id) = 0
+      exit
+    endif
+    scale object id, L3D_HALO_SCALE, L3D_HALO_SCALE, L3D_HALO_SCALE
+  next id
+
+endfunction
+
+function Virtualizer_Particles()
+
+  local particlename as string
+  local particle as dword
+  local particletype as string
+
+  do
+
+    Virtualizer_getvar(0)
+
+    if Virtualizer.type = VIRTUALIZER_VARIABLE
+      `set particle variables
+      select Virtualizer.var
+        case "x"
+          x = val(Virtualizer.value) * MEKAL_SCALAR
+        endcase
+        case "y"
+          y = val(Virtualizer.value) * MEKAL_SCALAR
+        endcase
+        case "z"
+          z = val(Virtualizer.value) * MEKAL_SCALAR
+        endcase
+        case "width"
+          width = val(Virtualizer.value) * MEKAL_SCALAR
+        endcase
+        case "height"
+          height = val(Virtualizer.value) * MEKAL_SCALAR
+        endcase
+        case "depth"
+          depth = val(Virtualizer.value) * MEKAL_SCALAR
+        endcase
+        case "type"
+          particletype = Virtualizer.value
+        endcase
+        case "plaincount"
+          count = val(Virtualizer.value)
+        endcase
+        case "texture"
+          texture = Virtualizer.value
+        endcase
+        case "size"
+          size = val(Virtualizer.value) * MEKAL_SCALAR
+        endcase
+      endselect
+    else
+      `either this is the start of a new particle, or the end of the entire tag
+      `either way, if there's a particle in memory we want to create it
+
+      if particlename
+
+        particle = p3d add particle(plaincount, ImgCache_fetch(texture), size)
+
+        p3d position emitter particle, x, y, z
+        p3d set particle area particle, width, height, depth
+
+        `choose particle type
+        select particletype
+          case "flames"
+            p3d set as flames particle particle
+          endcase
+          case "smoke"
+            p3d set as smoke particle particle
+          endcase
+          case "rain"
+            p3d set as rain particle particle
+          endcase
+          case "snow"
+            p3d set as snow particle particle
+          endcase
+          case "sparkle"
+            p3d set as sparkle particle particle
+          endcase
+        endselect
+
+      endif
+
+      if Virtualizer.type = VIRTUALIZER_EXIT
+        exit
+      endif
+
+      `new particle, reset variables
+      local x as float
+      local y as float
+      local z as float
+      local width as float = MEKAL_SCALAR
+      local height as float = MEKAL_SCALAR
+      local depth as float = MEKAL_SCALAR
+      local plaincount as dword = 16
+      local texture as string
+      local size as float
+      size = MEKAL_SCALAR * 0.7
+
+      particlename = Virtualizer.name
+
+    endif
+
+  loop
+
+  p3d update particles
+  b3d update billboards
+
+endfunction

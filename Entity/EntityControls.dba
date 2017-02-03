@@ -1,0 +1,100 @@
+REM *** Include File: Entity\EntityControls.dba ***
+REM Created: 4/12/2008 6:24:39 PM
+REM
+REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\Mekal\Mekal.dbpro
+REM 
+
+`process player input and AI
+function EntityControls_update(overrideplayer as boolean)
+
+  for id = 0 to array count(Entity())
+
+    `if entity is dead then ignore movement data
+    if Entity(id).dead
+    
+      Entity(id).controls.movement = 0
+      Entity(id).controls.angle = 0
+      Entity(id).controls.wantshoot = 0
+      Entity(id).controls.wantjump = 0
+    
+    else
+    
+      select Entity(id).controller
+        case ENTITY_CONTROLLER_PLAYER
+
+        if overrideplayer
+          `automatically make player walk forward
+          if Virtualizer.dropin = 0
+            Entity(id).controls.movement = 1
+            Entity(id).controls.angle = Entity.playerangle
+          endif
+        else
+
+          if Camera.mode = CAMERA_THIRD
+
+            Entity(id).controls.wantjump = Inp.push2
+
+            `calculate movement and angle for Mario 64 style controls
+            Entity(id).controls.movement = sqrt(Inp.x^2 + Inp.y^2)
+            if Entity(id).controls.movement < ENTITY_TOO_SLOW
+              `if player is moving too slow stop them
+              Entity(id).controls.movement = 0
+              Entity.playermoving = 0
+
+            else
+              Entity(id).controls.angle = wrap(atanfull(x vector3(Camera.position) - x vector3(Entity(id).oldposition), z vector3(Camera.position) - z vector3(Entity(id).oldposition)) - atanfull(Inp.x, Inp.y), 0, 360)
+              Entity.playerangle = Entity(id).controls.angle
+              Entity.playermoving = 1
+
+            endif
+          else
+
+            `allowed to stay on top of water
+            if Entity(Entity.player).surfacelock
+              Entity(id).controls.wantjump = Inp.push2
+            endif
+
+          endif
+
+          `target
+          Entity(id).targeting = Inp.target
+
+          `shoot
+          if Inp.push1
+            Entity(id).controls.wantshoot = 1
+            if Camera.mode = CAMERA_FIRST
+              Entity(id).controls.shootangle = -x vector3(Camera.angle)
+            else
+              Entity(id).controls.shootangle = 0
+            endif
+          else
+            Entity(id).controls.wantshoot = 0
+          endif
+
+        endif
+
+        endcase
+        case ENTITY_CONTROLLER_NPC
+        endcase
+        case ENTITY_CONTROLLER_ENEMY
+        
+          Entity(id).controls.wantshoot = 0
+          Entity(id).controls.movement = 0
+
+          Entity(id).targeting = 1
+          Entity(id).controls.angle = Entity(id).oldangle + 1
+          if Entity(id).target > -1
+            `only attack player
+            if Entity(Entity(id).target).controller = ENTITY_CONTROLLER_PLAYER
+              Entity(id).controls.movement = softsgn(Entity(id).targetdis - ((ENTITY_FOLLOW_DISTANCE * MEKAL_SCALAR)^2), Entity(id).targetdis/10.0)
+              Entity(id).controls.wantshoot = 1
+            endif
+          endif
+        endcase
+
+      endselect
+    endif
+
+  next id
+
+endfunction

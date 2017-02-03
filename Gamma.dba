@@ -1,0 +1,53 @@
+REM *** Include File: Gamma.dba ***
+REM Created: 7/7/2007 9:02:15 AM
+REM
+REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\Mekal\Mekal.dbpro
+REM
+
+global Gamma as Gamma
+
+type Gamma
+
+  gamma as byte
+  target as byte
+  settime as dword
+
+endtype
+
+function Gamma_set(_gamma as byte)
+
+  Gamma.target = _gamma
+
+  `screen must first fade from opposite color
+  _gamma = 255 - _gamma
+  set gamma _gamma, _gamma, _gamma
+  Gamma.gamma = _gamma
+  
+  Gamma.settime = Tbm.now
+  
+endfunction
+
+function Gamma_update()
+
+  local _gamma
+
+  if Gamma.gamma <> Gamma.target
+  
+    _gamma = (Tbm.now - Gamma.settime)*255 / MEKAL_GAMMA_TIME
+    if _gamma > 255
+      _gamma = 255
+    endif
+    
+    if Gamma.target = 0
+      _gamma = 255 - _gamma
+    endif
+
+    `don't waste time if gamma is already correct
+    if _gamma <> Gamma.gamma
+      set gamma _gamma, _gamma, _gamma
+      Gamma.gamma = _gamma
+    endif
+  
+  endif
+
+endfunction

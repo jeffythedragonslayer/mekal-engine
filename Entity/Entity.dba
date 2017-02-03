@@ -1,0 +1,936 @@
+REM *** Include File: Entity.dba ***
+REM Created: 7/17/2007 12:20:35 PM
+REM
+REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\Mekal\Mekal.dbpro
+REM
+
+#constant ENTITY_TOO_SLOW = 0.25
+#constant ENTITY_TARGET_POINT_DISTANCE = 1.0
+#constant ENTITY_MAX_TARGET_DISTANCE = 5.0
+#constant ENTITY_FOLLOW_DISTANCE = 1.0
+#constant ENTITY_DIEY = -100
+
+global Entity as Entity
+
+type Entity
+
+  player
+  playername as string
+  deadplayer
+  playerdied as boolean
+  playermoving as boolean
+  playerangle as float
+  playeronspinner
+  alone as boolean
+  
+  diey as float
+
+  new as float
+  old as float
+
+  `vectors
+  spinnerpos as dword
+  spinnerdis as dword
+
+endtype
+
+type EntityControls
+
+  movement as float
+  angle as float
+  wantjump as boolean
+  wantshoot as boolean
+  
+  shootangle as float
+
+endtype
+
+type aEntity
+
+  dead as boolean
+  notexist as boolean
+
+  object as dword
+
+  template as dword
+
+  controller as byte
+  #constant ENTITY_CONTROLLER_NONE = 0
+  #constant ENTITY_CONTROLLER_PLAYER = 1
+  #constant ENTITY_CONTROLLER_NPC = 2
+  #constant ENTITY_CONTROLLER_ENEMY = 3
+  
+  controls as EntityControls
+
+  `vectors
+  position as dword
+  oldposition as dword
+  velocity as dword
+
+  oldangle as float
+
+  airborn as boolean
+  gravityzone
+
+  inwater
+  surfacelock as boolean
+  platform
+
+  `time of next jump
+  jumptime as dword
+
+  health as float
+
+  `time of next shoot
+  shoottime as dword
+  friendlyfireid
+
+  anime as string
+  idletime as dword
+
+  targeting as boolean
+  target
+  targetdis as float
+
+endtype
+
+function Entity_init()
+
+  global ENTITY_GRAVITY as float
+  ENTITY_GRAVITY = 0.01 * MEKAL_SCALAR
+  global ENTITY_SURFACE_LOCK as float
+  ENTITY_SURFACE_LOCK = 0.005 * MEKAL_SCALAR
+  global ENTITY_MAXDIS as float
+  ENTITY_MAXDIS = (ENTITY_MAX_TARGET_DISTANCE * MEKAL_SCALAR) ^ 2
+
+  dim Entity() as aEntity
+
+  `no player to start
+  Entity.player = -1
+  Entity.deadplayer = -1
+  
+  `die at this y coordinate
+  Entity.diey = ENTITY_DIEY * MEKAL_SCALAR
+
+  EntityTemplate_init()
+  EntityAnime_init()
+
+  Entity.spinnerpos = make_vector3(0, 0, 0)
+  Entity.spinnerdis = make_vector3(0, 0, 0)
+  
+endfunction
+
+function Entity_new(template as dword, controller as byte, x as float, y as float, z as float)
+
+  local id as dword
+  local collisiontype as byte = 2
+
+  add to queue Entity()
+  id = array count(Entity())
+
+  Entity().template = template
+  Entity().controller = controller
+  Entity().health = EntityTemplate(template).health
+  Entity().platform = -1
+  if EntityTemplate(Entity().template).friendlyfire
+    Entity().friendlyfireid = -1
+  else
+    Entity().friendlyfireid = id
+  endif
+  
+  `don't start with a target
+  Entity(id).target = -1
+
+  `make entity object
+  Entity().object = b3d clone object(EntityTemplate(template).object)
+  if EntityTemplate(template).objectname = "sphere"
+    collisiontype = 1
+  endif
+  sc_setupobject Entity().object, SC_WORLD, collisiontype
+
+  Entity().position = make_vector3(x, y, z)
+  Entity().oldposition = make_vector3(x, y, z)
+  position_object_to_vector3(Entity().object, Entity().position, 0)
+  Entity().velocity = make_vector3(0, 0, 0)
+
+  Entity().inwater = Water_pointin(x, y, z, 1)
+  Entity().gravityzone = AntiGravityZone_pointin(x, y, z, 0)
+
+  `make a shadow for the entity
+  Shadow_new(Entity().object, EntityTemplate(Entity().template).yoffset)
+
+  Entity.alone = 0
+
+endfunction id
+
+function Entity_heal(id as dword, life as float, supercharge as boolean)
+
+  inc Entity(id).health, life
+
+  if supercharge = 0
+    if Entity(id).health > EntityTemplate(Entity(id).template).health
+      Entity(id).health = EntityTemplate(Entity(id).template).health
+    endif
+  endif
+
+endfunction
+
+function Entity_hurt(id as dword, damage as float)
+
+  `calculate defense
+  dec damage, EntityTemplate(Entity(id).template).defense
+  if damage <= 0
+    exitfunction
+  endif
+
+  `hurt entity
+  dec Entity(id).health, damage
+  if Entity(id).health <= 0
+    Entity_kill(id)
+  else
+    EntityAnime_play(id, "Impact")
+    SmartSFX_play("impact", 0, x vector3(Entity(id).position), y vector3(Entity(id).position), z vector3(Entity(id).position))
+  endif
+
+endfunction
+
+function Entity_kill(id as dword)
+
+  `string sent to the console
+  local str as string
+
+  SmartSFX_play("die", 0, x vector3(Entity(id).position), y vector3(Entity(id).position), z vector3(Entity(id).position))
+  if id = Entity.player
+    SmartSFX_stop("footstep")
+  endif
+
+  sc_removeobject Entity(id).object
+  EntityAnime_play(id, "Die")
+  FadeObj_new(Entity(id).object, 100, 0, 0, 3000, 1)
+
+  str = EntityTemplate(Entity(id).template).name
+  if id = Entity.player
+    Entity.player = -1
+    Entity.deadplayer = id
+    str = str + " (Player)"
+  endif
+  str = str + " was killed"
+
+  `untarget entity from all other entities
+  `and all other entities from this entity
+  Entity(id).targeting = 0
+  Entity_untarget(id)
+
+  Entity(id).dead = 1
+  Console_send(str, rgb(255, 0, 0))
+
+endfunction
+
+`untarget all entities from this one
+function Entity_untarget(entity as dword)
+
+  local id as dword
+
+  for id = 0 to array count(Entity())
+    if Entity(id).target = entity
+      Entity(id).target = -1
+    endif
+  next id
+
+endfunction
+
+function Entity_update(overrideplayer as boolean)
+
+  local id
+  local object as dword
+  local slope as float
+
+  local collision as dword
+  local factor as float
+  local angle as float
+  local spinangle as float
+  local distance as float
+  local trampoline
+
+  for id = 0 to array count(Entity())
+
+    `***********************
+    `** save old position **
+    `***********************
+    object = Entity(id).object
+    copy vector3 Entity(id).oldposition, Entity(id).position
+
+    `***************************
+    `** get desired movements **
+    `***************************
+
+    if Entity(id).notexist = 0
+
+      if abs(Entity(id).controls.movement) > 1
+        `sanatize input
+        Entity(id).controls.movement = sgn(Entity(id).controls.movement)
+      else
+        `if movement is 0 then angle must be recovered
+        if Entity(id).controls.angle = 0
+          Entity(id).controls.angle = Entity(id).oldangle
+        endif
+      endif
+      
+      `plat footstep sound
+      if id = Entity.player
+        if Entity(id).controls.movement && Entity(id).airborn = 0
+          SmartSFX_play("footstep", 1, x vector3(Entity(id).oldposition), y vector3(Entity(id).oldposition), z vector3(Entity(id).oldposition))
+        else
+          SmartSFX_stop("footstep")
+        endif
+      endif
+
+      `**********************
+      `** find if in water **
+      `**********************
+      if Entity(id).surfacelock
+        Entity(id).inwater = Water_pointin(x vector3(Entity(id).position), y vector3(Entity(id).oldposition), z vector3(Entity(id).oldposition), 0)
+        if Entity(id).airborn = 0
+          Entity(id).inwater = -1
+        endif
+        if Entity(id).inwater = -1
+          Entity(id).surfacelock = 0
+        endif
+      else
+        if Entity(id).inwater > -1
+          Entity(id).inwater = Water_pointin(x vector3(Entity(id).oldposition), y vector3(Entity(id).oldposition), z vector3(Entity(id).oldposition), 1)
+        else
+          Entity(id).inwater = Water_pointin(x vector3(Entity(id).oldposition), y vector3(Entity(id).oldposition), z vector3(Entity(id).oldposition), 1)
+          if Entity(id).inwater > -1
+            SmartSFX_play("hit water", 0, x vector3(Entity(id).oldposition), y vector3(Entity(id).oldposition), z vector3(Entity(id).oldposition))
+          endif
+        endif
+      endif
+
+      `****************************
+      `** apply desired movement **
+      `****************************
+      if Entity(id).controls.movement
+        if Entity(id).inwater > -1
+          set_vector3_xz(Entity(id).velocity, sin(Entity(id).controls.angle) * Entity(id).controls.movement * EntityTemplate(Entity(id).template).waterspeed, cos(Entity(id).controls.angle) * Entity(id).controls.movement * EntityTemplate(Entity(id).template).waterspeed, 0)
+        else
+          set_vector3_xz(Entity(id).velocity, sin(Entity(id).controls.angle) * Entity(id).controls.movement * EntityTemplate(Entity(id).template).speed, cos(Entity(id).controls.angle) * Entity(id).controls.movement * EntityTemplate(Entity(id).template).speed, 0)
+        endif
+        EntityAnime_play(id, "Move")
+      else
+        set vector3 Entity(id).velocity, 0, y vector3(Entity(id).velocity), 0
+        if Entity(id).anime = "Move"
+          EntityAnime_play(id, "Idle")
+        endif
+      endif
+
+      if Entity(id).controls.wantjump
+        if Tbm.now > Entity(id).jumptime
+
+          if Entity(id).airborn = 0
+            Entity_jump(id, 1)
+          endif
+
+        endif
+
+        `swim up
+        if Entity(id).inwater > -1
+          set_vector3_y(Entity(id).velocity, EntityTemplate(Entity(id).template).swimspeed, 1)
+        endif
+
+      endif
+
+      `*******************
+      `** apply gravity **
+      `*******************
+      Entity_applygravity(id, x vector3(Entity(id).oldposition), y vector3(Entity(id).oldposition), z vector3(Entity(id).oldposition))
+
+      `************************
+      `** save new positions **
+      `************************
+      copy vector3 Entity(id).position, Entity(id).velocity
+      multiply vector3 Entity(id).position, Tbm.factor
+      add vector3 Entity(id).position, Entity(id).position, Entity(id).oldposition
+
+      `**************
+      `** Swimming **
+      `**************
+
+      `if entity is surface swimming then lock them to the surface
+      if Entity(id).inwater > -1
+
+        `check to make sure entity is on water
+        if Entity(id).surfacelock = 0
+          if y vector3(Entity(id).position) + ENTITY_SURFACE_LOCK => object position y(Water(Entity(id).inwater).object)
+            Entity(id).surfacelock = 1
+          endif
+        endif
+
+        if Entity(id).surfacelock
+          `now lock entity if they want to jump
+          if Entity(id).controls.wantjump
+
+            if Entity(id).inwater > -1
+              `lock
+              set_vector3_y(Entity(id).position, object position y(Water(Entity(id).inwater).object) - ENTITY_SURFACE_LOCK, 0)
+            endif
+
+          else
+
+            `unlock
+            Entity(id).surfacelock = 0
+            set_vector3_y(Entity(id).velocity, 0, 0)
+
+          endif
+        endif
+      endif
+
+      if Entity(id).platform = -1
+        collision = sc_spherecastgroup(SC_WORLD, x vector3(Entity(id).oldposition), y vector3(Entity(id).oldposition), z vector3(Entity(id).oldposition), x vector3(Entity(id).oldposition)+sin(Entity(id).controls.angle+180)*0.1*EntityTemplate(Entity(id).template).radius, y vector3(Entity(id).oldposition), z vector3(Entity(id).oldposition)+cos(Entity(id).controls.angle+180)*0.1*EntityTemplate(Entity(id).template).radius, EntityTemplate(Entity(id).template).radius*1.3, 0)
+        Entity(id).platform = Platform_isplatform(collision)
+      endif
+
+      `*****************
+      `** Platforming **
+      `*****************
+      if Entity(id).platform > -1
+        if Platform(Entity(id).platform).departtime = 0
+
+          factor = Tbm.factor * (Platform(Entity(id).platform).station*2.0-1)
+
+          multiply vector3 Platform(Entity(id).platform).direction, factor
+          add vector3 Entity(id).position, Entity(id).position, Platform(Entity(id).platform).direction
+          if factor > 0
+            set_vector3_y(Entity(id).position, -y vector3(Platform(Entity(id).platform).direction), 1)
+          endif
+
+          `undo calculation
+          divide vector3 Platform(Entity(id).platform).direction, factor
+
+        endif
+      endif
+
+      `*********************
+      `** apply collision **
+      `*********************
+      Entity_getcollisionfoci(id, y vector3(Entity(id).position), y vector3(Entity(id).oldposition))
+
+      `* verical collision *
+      Entity(id).platform = -1
+      collision = sc_spherecastgroup(SC_WORLD, x vector3(Entity(id).oldposition), Entity.old, z vector3(Entity(id).oldposition), x vector3(Entity(id).oldposition), Entity.new - ENTITY_SURFACE_LOCK, z vector3(Entity(id).oldposition), EntityTemplate(Entity(id).template).radius, 0)
+      if collision
+
+        `***************************
+        `* entity is on the ground *
+        `***************************
+
+        Entity(id).platform = Platform_isplatform(collision)
+
+        `is entity on spinner
+        Entity.playeronspinner = -1
+        spinner = Spinner_isspinner(collision)
+        if spinner > -1
+          set_vector3_to_object_position(Entity.spinnerpos, Spinner(spinner).object)
+          subtract vector3 Entity.spinnerdis, Entity(id).position, Entity.spinnerpos
+          spinangle = wrap(atanfull(x vector3(Entity.spinnerdis), z vector3(Entity.spinnerdis)) + y vector3(Spinner(spinner).spin) * Tbm.factor, 0, 360)
+          distance = sqrt(x vector3(Entity.spinnerdis)^2 + z vector3(Entity.spinnerdis)^2)
+          set_vector3_xz(Entity(id).position, x vector3(Entity.spinnerpos) + sin(spinangle) * distance, z vector3(Entity.spinnerpos) + cos(spinangle) * distance, 0)
+          inc Entity(id).controls.angle, y vector3(Spinner(spinner).spin) * Tbm.factor
+          if Entity.player = id
+            Entity.playeronspinner = spinner
+            if Camera.mode = CAMERA_FIRST
+              set_vector3_y(Camera.angle, y vector3(Spinner(spinner).spin) * Tbm.factor, 1)
+            endif
+          endif
+        endif
+
+        `if entity is landing then set jump timer
+        if Entity(id).airborn
+          Entity(id).jumptime = Tbm.now + EntityTemplate(Entity(id).template).jumpdelay
+        endif
+
+        slope = sc_getcollisionnormaly()
+        if abs(slope) > EntityTemplate(Entity(id).template).slope
+
+          `stick
+          set_vector3_y(Entity(id).velocity, 0, 0)
+          set_vector3_y(Entity(id).position, sc_getstaticcollisiony() + (1 - (slope < 0)*2)*EntityTemplate(Entity(id).template).extracast, 0)
+
+          `ground or ceiling?
+          Entity(id).airborn = (slope < 0)
+
+        else
+          `use angles to see if entity is going up or down
+          if anglediff(Entity(id).controls.angle, atanfull(sc_getcollisionnormalx(), sc_getcollisionnormalz())) > 90
+            `if going up treat wall as verticle
+            if Entity(id).airborn
+              `stop falling if entity is about to hit the real ground
+              if y vector3(Entity(id).velocity) < 0
+                `make sure entity is actually going down
+                if sc_raycastgroup(SC_WORLD, x vector3(Entity(id).oldposition), y vector3(Entity(id).oldposition) + EntityTemplate(Entity(id).template).height/2.0, z vector3(Entity(id).oldposition), x vector3(Entity(id).oldposition), y vector3(Entity(id).oldposition) - EntityTemplate(Entity(id).template).height/2.0, z vector3(Entity(id).oldposition), 0)
+                  Entity(id).airborn = 0
+                  set_vector3_y(Entity(id).velocity, 0, 0)
+                  set_vector3_y(Entity(id).position, sc_getstaticcollisiony() + EntityTemplate(Entity(id).template).height/2.0, 0)
+                endif
+              endif
+            else
+              `lock to correct ground
+              set_vector3_y(Entity(id).position, y vector3(Entity(id).oldposition), 0)
+              if sc_raycastgroup(SC_WORLD, x vector3(Entity(id).position), y vector3(Entity(id).position) + EntityTemplate(Entity(id).template).height/2.0, z vector3(Entity(id).position), x vector3(Entity(id).position), y vector3(Entity(id).position) - EntityTemplate(Entity(id).template).height, z vector3(Entity(id).position), 0)
+                if sc_getcollisionnormaly() > EntityTemplate(Entity(id).template).slope
+                  set_vector3_y(Entity(id).velocity, 0, 0)
+                  set_vector3_y(Entity(id).position, sc_getstaticcollisiony() + EntityTemplate(Entity(id).template).height/2.0, 0)
+                endif
+              endif
+            endif
+
+          else
+            `if going down then slide down it
+            Entity(id).airborn = 1
+            set_vector3_xz(Entity(id).position, sc_getcollisionslidex(), sc_getcollisionslidez(), 0)
+
+          endif
+
+        endif
+
+        `is entity on trampoline
+        trampoline = Trampoline_istrampoline(collision)
+        if trampoline > -1
+          Entity_jump(id, sgn(y vector3(Entity(id).position)-object position y(Trampoline(trampoline).object)) * Trampoline(trampoline).bounce)
+        endif
+
+      else
+
+        Entity(id).airborn = 1
+
+      endif
+
+      `** horizontal collision **
+      if sc_sphereslidegroup(SC_WORLD, x vector3(Entity(id).oldposition), y vector3(Entity(id).oldposition), z vector3(Entity(id).oldposition), x vector3(Entity(id).position), y vector3(Entity(id).position), z vector3(Entity(id).position), EntityTemplate(Entity(id).template).radius, 0)
+        set_vector3_xz(Entity(id).position, sc_getcollisionslidex(), sc_getcollisionslidez(), 0)
+      endif
+ 
+      `************
+      `** target **
+      `************
+      if Entity(id).targeting && (Entity.alone = 0)
+
+        `find an entity to target
+        Entity(id).target = Entity_findtarget(id, Entity(id).controls.angle)
+
+        `target the entity
+        if Entity(id).target > -1
+          Entity(id).controls.angle = atanfull(x vector3(Entity(Entity(id).target).position)-x vector3(Entity(id).position), z vector3(Entity(Entity(id).target).position)-z vector3(Entity(id).position))
+        else
+          if array count(Entity()) = 0
+            Entity.alone = 1
+          endif
+        endif
+
+      else
+        Entity(id).target = -1
+      endif
+
+      `***********
+      `** Shoot **
+      `***********
+      if Entity(id).controls.wantshoot
+        Entity_shoot(id)
+      endif
+
+      `************
+      `** update **
+      `************
+
+      `save angle
+      Entity(id).oldangle = Entity(id).controls.angle
+
+      yrotate object object, Entity(id).controls.angle
+      position object object, x vector3(Entity(id).position), y vector3(Entity(id).position) - EntityTemplate(Entity(id).template).yoffset, z vector3(Entity(id).position)
+      if Entity(id).dead = 0
+        sc_updateobject object
+        
+        `if entity has fallen too much kill them
+        if y vector3(Entity(id).position) < Entity.diey
+            Entity_kill(id)
+        endif
+      endif
+      
+      EntityAnime_update(id)
+
+    endif
+
+  next id
+
+endfunction
+
+function Entity_shoot(id as dword)
+
+  if Tbm.now < Entity(id).shoottime
+    exitfunction 0
+  endif
+  if Entity(id).dead
+    exitfunction 0
+  endif
+
+  SmartSFX_play("shoot", 0, x vector3(Entity(id).position), y vector3(Entity(id).position), z vector3(Entity(id).position))
+  Projectile_new(x vector3(Entity(id).position), y vector3(Entity(id).position) + EntityTemplate(Entity(id).template).yoffset/2.0, z vector3(Entity(id).position), sin(object angle y(Entity(id).object)), tan(Entity(id).controls.shootangle), cos(object angle y(Entity(id).object)), EntityTemplate(Entity(id).template).bulletspeed, EntityTemplate(Entity(id).template).bulletlife, Entity(id).friendlyfireid, EntityTemplate(Entity(id).template).bulletattack)
+  EntityAnime_play(id, "Attack")
+  Entity(id).shoottime = Tbm.now + EntityTemplate(Entity(id).template).shootdelay
+
+endfunction 1
+
+function Entity_jump(id as dword, jumpfactor as float)
+
+  local factor as float
+
+  set_vector3_y(Entity(id).velocity, EntityTemplate(Entity(id).template).jumpspeed * jumpfactor, 0)
+
+  `compensate for relativity
+  if Entity(id).platform > -1
+    if Platform(Entity(id).platform).departtime = 0
+
+      factor = y vector3(Platform(Entity(id).platform).direction) * (Platform(Entity(id).platform).station*2.0-1)
+
+      set_vector3_y(Entity(id).velocity, factor, 1)
+
+    endif
+  endif
+
+  Entity(id).airborn = 1
+
+endfunction
+
+function Entity_applygravity(id as dword, x as float, y as float, z as float)
+
+  local terminalvelocity as float
+  local gravity as float
+  local zzone
+  local generalzone
+
+  `find terminal velocity
+  if Entity(id).inwater > -1
+    terminalvelocity = EntityTemplate(Entity(id).template).waterterminalvelocity
+  else
+    terminalvelocity = EntityTemplate(Entity(id).template).terminalvelocity
+  endif
+
+  `apply gravity
+  if abs(y vector3(Entity(id).velocity)) <= terminalvelocity
+
+    gravity = ENTITY_GRAVITY * Tbm.factor
+
+    `find which zone entity is in
+    zzone = AntiGravityZone_pointin(x, y, z, 1)
+    generalzone = AntiGravityZone_pointin(x, y, z, 0)
+    
+    `play antigravity sound
+    if generalzone > -1
+      if Entity(id).gravityzone = -1
+        if Entity.player = id
+          SmartSFX_play("anti gravity", 0, x, y, z)
+        endif
+      endif
+    endif
+    Entity(id).gravityzone = generalzone
+    
+    `multiply by anti-gravity zone scalar
+    if zzone > -1
+      gravity = gravity * AntiGravityZone(zzone).gravity
+    endif
+    set_vector3_y(Entity(id).velocity, -gravity, 1)
+
+  endif
+
+  `lock velocity at terminal velocity
+  if abs(y vector3(Entity(id).velocity)) > terminalvelocity
+    set_vector3_y(Entity(id).velocity, sgn(y vector3(Entity(id).velocity)) * terminalvelocity, 0)
+  endif
+
+endfunction
+
+`optimizes collision for nonspherical models
+function Entity_getcollisionfoci(id as dword, y as float, oldy as float)
+
+  if y > oldy
+    Entity.new = y + EntityTemplate(Entity(id).template).extracast
+    Entity.old = oldy - EntityTemplate(Entity(id).template).extracast
+  else
+    Entity.new = y - EntityTemplate(Entity(id).template).extracast
+    Entity.old = oldy + EntityTemplate(Entity(id).template).extracast
+  endif
+
+endfunction
+
+function Entity_reset(preserveplayer as boolean)
+
+  local id
+
+  local template as dword
+  local health as float
+  
+  `die at this y coordinate
+  Entity.diey = ENTITY_DIEY
+
+  SmartSFX_stop("footstep")
+
+  for id = 0 to array count(Entity())
+    null = delete vector3(Entity(id).position)
+    null = delete vector3(Entity(id).oldposition)
+    null = delete vector3(Entity(id).velocity)
+    if Entity(id).notexist = 0
+      if sc_collisionstatus(Entity(id).object)
+        sc_removeobject Entity(id).object
+      endif
+      delete object Entity(id).object
+    endif
+  next id
+
+  if Entity.player = -1
+    preserveplayer = 0
+  endif
+
+  if preserveplayer
+
+    template = Entity(Entity.player).template
+    health = Entity(Entity.player).health
+
+    Entity.player = 0
+  else
+    Entity.player = -1
+  endif
+
+  EntityTemplate_reset(preserveplayer)
+  EntityAnime_reset(preserveplayer)
+  empty array Entity()
+
+  if preserveplayer
+    Entity(Entity_new(template, ENTITY_CONTROLLER_PLAYER, 0, 0, 0)).health = health
+  endif
+
+endfunction
+
+`returns id if the object is an entity
+function Entity_isentity(object as dword)
+
+  local id
+
+  for id = 0 to array count(Entity())
+    if Entity(id).object = object
+      exitfunction id
+    endif
+  next id
+
+endfunction -1
+
+`find the entity closest to the given point
+function Entity_findtarget(me as dword, angle as float)
+
+  local id
+  local closeid = -1
+  local closedis as float
+  local distance as float
+  
+  local controllertype
+  local target
+
+  local ex as float
+  local ez as float
+
+  local x as float
+  local y as float
+  local height2 as float
+  local z as float
+  
+  `only enemies can target the player
+  `and only the player can target enemies
+  select Entity(me).controller
+    case ENTITY_CONTROLLER_PLAYER
+      controllertype = ENTITY_CONTROLLER_ENEMY
+    endcase
+    case ENTITY_CONTROLLER_ENEMY
+      controllertype = ENTITY_CONTROLLER_PLAYER
+    endcase
+    case default
+      exitfunction
+    endcase
+  endselect
+  
+  target = Entity(me).target
+  height2 = EntityTemplate(Entity(me).template).height / 2.0
+
+  ex = sin(angle) * MEKAL_SCALAR * ENTITY_TARGET_POINT_DISTANCE
+  ez = cos(angle) * MEKAL_SCALAR * ENTITY_TARGET_POINT_DISTANCE
+
+  x = x vector3(Entity(me).position)
+  y = y vector3(Entity(me).position)
+  z = z vector3(Entity(me).position)
+  
+  if target = -1
+    `search for a target
+    for id = 0 to array count(Entity())
+    
+      if Entity(id).controller = controllertype
+        if (id <> me) && (Entity(id).dead = 0)
+
+          if y + height2 > y vector3(Entity(id).position)
+            if y - height2 < y vector3(Entity(id).position)
+
+              distance = (x vector3(Entity(id).position)+ex-x)^2 + (z vector3(Entity(id).position)+ez-z)^2
+              if distance < ENTITY_MAXDIS
+                if (distance < closedis) || (closedis = 0)
+                  closedis = distance
+                  closeid = id
+                endif
+
+              endif
+              
+            endif
+          endif
+          
+        endif
+      endif
+      
+    next id
+    target = closeid
+    
+  else
+  
+    `find if target is still in range
+    if y + height2 > y vector3(Entity(target).position)
+      if y - height2 < y vector3(Entity(target).position)
+
+        distance = (x vector3(Entity(target).position)+ez-x)^2 + (z vector3(Entity(target).position)+ez-z)^2
+        if distance < ENTITY_MAXDIS
+          closeid = target
+        endif
+
+      endif
+    endif
+    
+  endif
+  
+  `copy correct distance into variable
+  if target = -1
+    Entity(me).targetdis = 0
+  else
+    Entity(me).targetdis = (x vector3(Entity(target).position)-x)^2 + (z vector3(Entity(target).position)-z)^2
+  endif
+
+endfunction closeid
+
+function Virtualizer_Entities()
+
+  local entityname as string
+  local template as dword
+  local id as dword
+
+  do
+
+  Virtualizer_getvar(0)
+
+    if Virtualizer.type = VIRTUALIZER_VARIABLE
+    
+      `set entity variables
+      select Virtualizer.var
+        case "controller"
+          select Virtualizer.value
+            case "player"
+              controller = ENTITY_CONTROLLER_PLAYER
+            endcase
+            case "npc"
+              controller = ENTITY_CONTROLLER_NPC
+            endcase
+            case "enemy"
+              controller = ENTITY_CONTROLLER_ENEMY
+            endcase
+            case "none"
+              controller = ENTITY_CONTROLLER_NONE
+            endcase
+          endselect
+        endcase
+        case "x"
+          x = val(Virtualizer.value) * MEKAL_SCALAR
+        endcase
+        case "y"
+          y = val(Virtualizer.value) * MEKAL_SCALAR
+        endcase
+        case "z"
+          z = val(Virtualizer.value) * MEKAL_SCALAR
+        endcase
+        case "rx"
+          rx = val(Virtualizer.value)
+        endcase
+        case "ry"
+          ry = val(Virtualizer.value)
+        endcase
+        case "rz"
+          rz = val(Virtualizer.value)
+        endcase
+      endselect
+    else
+      `either this is the start of a new entity, or the end of the entire tag
+      `either way, if there's an entity in memory we want to create it
+
+      if entityname
+        `time to create the entity before the data gets deleted
+
+        `if the player has already been created then don't create him/her again
+        if (isplayer = 0) || Entity.player = -1
+
+          if isplayer
+            controller =  ENTITY_CONTROLLER_PLAYER
+          else
+            if controller = ENTITY_CONTROLLER_PLAYER
+              System_Error("Could not create " + entityname + " entity from " + Virtualizer.filename + " mekal world file because only one player is allowed.")
+            endif
+          endif
+
+          id = Entity_new(template, controller, x, y, z)
+          if isplayer
+            Entity.player = id
+          endif
+
+          `apply rotation and positioning
+          rotate object Entity(id).object, rx, ry, rz
+          Entity(id).oldangle = ry
+
+        endif
+
+      endif
+
+      if Virtualizer.type = VIRTUALIZER_EXIT
+        exitfunction
+      endif
+
+      `new entity, reset variables
+      local isplayer as boolean
+      local controller as byte
+      local x as float
+      local y as float
+      local z as float
+      local rx as float
+      local ry as float
+      local rz as float
+
+      entityname = Virtualizer.name
+      `get template name of player
+      if entityname = "Player"
+        entityname = Entity.playername
+        isplayer = 1
+      endif
+
+      `load template
+      template = EntityTemplate_find(entityname)
+      if template = -1
+        template = Virtualizer_LoadEntityTemplate(entityname)
+      endif
+      
+      `set default controller
+      controller = EntityTemplate(template).controller
+
+    endif
+
+  loop
+
+endfunction

@@ -1,0 +1,121 @@
+REM *** Include File: Image Cache.dba ***
+REM Created: 7/28/2007 10:32:46 PM
+REM
+REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\Mekal\Mekal.dbpro
+REM
+
+#constant IMGCACHE_MAX_SIZE = 63
+
+type aImgCache
+
+  name as string
+  image as dword
+  active as boolean
+
+endtype
+
+function ImgCache_init()
+
+  dim ImgCache() as aImgCache
+
+endfunction
+
+`returns the id of an image with given name
+function ImgCache_fetch(name as string)
+
+  local id
+  local returnval as dword
+  local color as dword
+  local red as byte
+  local green as byte
+  local blue as byte
+
+  `search cache
+  for id = 0 to array count(ImgCache())
+    if ImgCache(id).name = name
+      `found it
+      ImgCache_bump(id)
+      returnval = ImgCache(0).image
+      exitfunction returnval
+    endif
+  next id
+
+  `couldn't find it
+  array insert at top ImgCache()
+  ImgCache().name = name
+  ImgCache().active = 1
+
+  `if image is solid color, create is using memblocks
+  if fast lower$(fast left$(name, 4)) = "rgb:"
+  
+    split string mid$(name, 5, 0), ","
+    red = val(get split word$(1))
+    green = val(get split word$(2))
+    blue = val(get split word$(3))
+
+    color = (red << 16) + (green << 8) + blue
+    ImgCache().image = makeRGBimage(color)
+  else
+    `image is in a file
+    if file exist(name) = 0
+      System_Error("Image " + name + " was not found.")
+    endif
+    ImgCache().image = img load image(name)
+  endif
+  returnval = ImgCache().image
+
+endfunction returnval
+
+`bump image to top of the list
+function ImgCache_bump(id as dword)
+
+  local name as string
+  local image as dword
+
+  if id
+
+    name = ImgCache(id).name
+    image = ImgCache(id).image
+    array delete element ImgCache(), id
+
+    array insert at top ImgCache()
+    ImgCache().name = name
+    ImgCache().image = image
+
+  endif
+
+  ImgCache(0).active = 1
+
+endfunction
+
+`sets all images to not active
+function ImgCache_archive()
+
+  local id
+
+  for id = 0 to array count(ImgCache())
+    ImgCache(id).active = 0
+  next id
+
+endfunction
+
+`delete inactive images
+function ImgCache_clean()
+
+  local id
+
+  for id = 0 to array count(ImgCache())
+
+    if ImgCache(id).active
+      inc id
+    else
+      if array count(ImgCache()) <= IMGCACHE_MAX_SIZE
+        exit
+      endif
+      delete image ImgCache(id).image
+      array delete element ImgCache(), id
+    endif
+
+  next id
+
+endfunction

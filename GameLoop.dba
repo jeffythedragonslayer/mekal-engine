@@ -1,0 +1,120 @@
+REM *** Include File: Game Loop.dba ***
+REM Creat: 7/28/2007 2:55:05 PM
+REM
+REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\Mekal\Mekal.dbpro
+REM
+
+#constant GAMELOOP_GAMEPLAY = 0
+#constant GAMELOOP_FADEIN = 1
+#constant GAMELOOP_FADEOUT = 2
+
+function GameLoop(state as byte)
+
+  Tbm_update()
+  Console_update()
+
+  if state = GAMELOOP_GAMEPLAY
+    Inp_update()
+  else
+    Gamma_update()
+  endif
+  
+  Platform_update()
+  Spinner_update()
+  Scroll_update()
+  Water_update()
+
+  if state = GAMELOOP_FADEOUT
+    Projectile_update(1)
+  else
+    Projectile_update(0)
+  endif
+  
+  if state = GAMELOOP_FADEIN
+    EntityControls_update(1) 
+  else
+    EntityControls_update(0)
+  endif
+
+  if state = GAMELOOP_FADEIN
+    Entity_update(1)
+  else
+    Entity_update(0)
+  endif
+  
+  HUD_update()
+
+  FadeObj_update()
+  
+  Shadow_update()
+
+  if state = GAMELOOP_GAMEPLAY
+    `if new world then skip processing this frame
+    if Link_update()
+      exitfunction
+    endif
+  endif
+
+  Camera_update(1)
+  SmartSFX_update()
+  b3d update billboards
+  Rts_update()
+  
+  null = l3d display lights()
+  p3d update particles
+
+  if state = GAMELOOP_FADEOUT
+    DynamicMusic_update(0)
+  else
+    DynamicMusic_update(1)
+  endif
+  
+  if debug
+    GameLoop_debug()
+  endif
+  
+  `commented out debug code for backup 10:12 AM 4/3/2010
+  `for id = 0 to array count(SmartSFX())
+  `  text 0, id*10, SmartSFX(id).name
+  `next id
+
+  fastsync
+  
+  `game over if player died
+  if Entity.playerdied
+    System_gameover()
+  endif
+
+endfunction
+
+function GameLoop_debug()
+
+  local pp as dword
+  local pv as dword
+  local x as dword
+
+  if Entity.player > -1
+  
+    `get player vector
+    pp = Entity(Entity.player).position
+    pv = Entity(Entity.player).velocity
+
+    x = x vector3(screen) / 2
+
+    d3d_starttext
+      d3d_text D3D_STD, x, 0, 0, "x: " + str$(x vector3(pp)), -1
+      d3d_text D3D_STD, x, 10, 0, "y: " + str$(y vector3(pp)), -1
+      d3d_text D3D_STD, x, 20, 0, "z: " + str$(z vector3(pp)), -1
+      
+      d3d_text D3D_STD, x, 40, 0, "vx: " + str$(x vector3(pv)), -1
+      d3d_text D3D_STD, x, 50, 0, "vy: " + str$(y vector3(pv)), -1
+      d3d_text D3D_STD, x, 60, 0, "vz: " + str$(z vector3(pv)), -1
+
+      d3d_text D3D_STD, x, 80, 0, "airborn: " + str$(Entity(Entity.player).airborn), -1
+
+      d3d_text D3D_STD, x, 90, 0, "fps: " + str$(Tbm.realfps, 0), -1
+    d3d_endtext
+
+  endif
+
+endfunction

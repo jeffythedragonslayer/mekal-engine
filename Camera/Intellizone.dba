@@ -1,0 +1,146 @@
+REM *** Include File: Intellizone.dba ***
+REM Created: 8/18/2007 7:04:34 AM
+REM
+REM Included in Project: C:\Program Files\The Game Creators\Dark Basic Professional\Projects\Mekal\Mekal.dbpro
+REM 
+
+type aIntellizone
+
+  `vector
+  position as dword
+
+  radius as float
+  extrapolation as float
+
+endtype
+
+function Intellizone_init()
+
+  dim Intellizone() as aIntellizone
+    
+endfunction
+
+function Intellizone_new(x as float, y as float, z as float, radius as float, extrapolation as float)
+
+  local id as dword
+
+  add to queue Intellizone()
+  id = array count(Intellizone())
+
+  Intellizone().position = make_vector3(x, y, z)
+  Intellizone().radius = radius
+  Intellizone().extrapolation = extrapolation
+
+endfunction
+
+function Intellizone_extrapolate(id as dword, smooth as boolean)
+
+  local dirflip = 1
+  
+  `extrapolate camera position
+  set_vector3_to_object_position(Camera.position, Entity(Entity.player).object)
+  subtract vector3 Camera.position, Camera.position, Intellizone(id).position
+  multiply vector3 Camera.position, Intellizone(id).extrapolation
+  add vector3 Camera.position, Intellizone(id).position, Camera.position
+
+  `calculate correct angle
+  set_vector3_y(Camera.angle, atanfull(x vector3(Intellizone(id).position) - x vector3(Camera.position), z vector3(Intellizone(id).position) - z vector3(Camera.position)), 0)
+  
+  `if using interpolation flip angle 180
+  if Intellizone(id).extrapolation > 0
+    if Intellizone(id).extrapolation < 1
+      set_vector3_y(Camera.angle, 180, 1)
+      dirflip = -1
+    endif
+  endif
+  
+  set camera to follow x vector3(Intellizone(id).position), y vector3(Intellizone(id).position), z vector3(Intellizone(id).position), y vector3(Camera.angle), dirflip * b3d get distance(x vector3(Camera.position), 0, z vector3(Camera.position), x vector3(Intellizone(id).position), 0, z vector3(Intellizone(id).position)), y vector3(Camera.position) - y vector3(Intellizone(id).position), 1 + smooth * CAMERA_SMOOTH_FACTOR, 0
+  set vector3 to camera position Camera.position, 0
+  
+endfunction
+
+function Intellizone_inintellizone()
+
+  local id
+  
+  for id = 0 to array count(Intellizone())
+  
+    if Intellizone(id).radius = 0
+      exitfunction id
+    endif
+    
+    if b3d get distance to object(Entity(Entity.player).object, x vector3(Intellizone(id).position), y vector3(Intellizone(id).position), z vector3(Intellizone(id).position)) <= Intellizone(id).radius
+      exitfunction id
+    endif
+  
+  next id
+
+endfunction -1
+
+
+function Intellizone_reset()
+
+  local id
+
+  for id = 0 to array count(Intellizone())
+    null = delete vector3(Intellizone(id).position)
+  next id
+
+  empty array Intellizone()
+
+endfunction
+
+function Virtualizer_Intellizones()
+
+  local intellizonename as string
+
+  do
+
+    Virtualizer_getvar(0)
+
+    if Virtualizer.type = VIRTUALIZER_VARIABLE
+      `set intellizone variables
+      select Virtualizer.var
+        case "x"
+          x = val(Virtualizer.value) * MEKAL_SCALAR
+        endcase
+        case "y"
+          y = val(Virtualizer.value) * MEKAL_SCALAR
+        endcase
+        case "z"
+          z = val(Virtualizer.value) * MEKAL_SCALAR
+        endcase
+        case "radius"
+          radius = val(Virtualizer.value)* MEKAL_SCALAR
+        endcase
+        case "extrapolation"
+          extrapolation = val(Virtualizer.value)
+        endcase
+      endselect
+    else
+      `either this is the start of a new intellizone, or the end of the entire tag
+      `either way, if there's an intellizone in memory we want to create it
+
+      `time to create the intellizone before the data gets deleted
+      if intellizonename
+        Intellizone_new(x, y, z, radius, extrapolation)
+      endif
+
+      if Virtualizer.type = VIRTUALIZER_EXIT
+        exitfunction
+      endif
+
+      `new intellizone, reset variables
+      local x as float
+      local y as float
+      local z as float
+      local radius as float = 0
+      local extrapolation as float = 2.0
+
+      intellizonename = Virtualizer.name
+
+    endif
+
+  loop
+  
+endfunction
